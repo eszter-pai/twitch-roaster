@@ -2,12 +2,14 @@ import socket
 import re
 import os
 from dotenv import load_dotenv
+import requests
 
 load_dotenv()
 
 ACCESS_TOKEN =  os.getenv('TWITCH_OAUTH_TOKEN')
 CHANNEL = os.getenv('TWITCH_CHANNEL')
 BOT_NAME = os.getenv('TWITCH_BOT_USERNAME')
+MODEL_URL = os.getenv('MODEL_API_URL')
 
 class SimpleTwitchRoastBot:
     """Simple roast bot for inappropriate content."""
@@ -117,7 +119,18 @@ class SimpleTwitchRoastBot:
         if username.lower() == self.nickname.lower():
             return
         
-        self.send_chat_message("Hello")
+
+        payload = {
+            "model": "gemma3:4b",
+            "prompt": message,
+            "stream": False
+        }
+
+        response = requests.post(MODEL_URL, json=payload)
+        # print(response.json()["response"])
+
+
+        self.send_chat_message(response.json()["response"])
         
        
     def listen(self):
