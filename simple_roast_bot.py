@@ -62,9 +62,33 @@ class SimpleTwitchRoastBot:
     def send_chat_message(self, message):
         """Send a message to the Twitch chat channel."""
         if self.socket and self.running:
-            chat_msg = f"PRIVMSG #{self.channel} :{message}"
+            # Sanitize message: remove newlines, clean up formatting
+            sanitized = self.sanitize_message(message)
+            chat_msg = f"PRIVMSG #{self.channel} :{sanitized}"
             self.send_raw(chat_msg)
-            print(f"[ROAST SENT] {message}")
+            print(f"[ROAST SENT] {sanitized}")
+    
+    def sanitize_message(self, message):
+        """Clean up message for Twitch chat - remove newlines and format properly."""
+        # Replace newlines with spaces
+        sanitized = message.replace('\n', ' ').replace('\r', ' ')
+        
+        # Remove markdown formatting
+        sanitized = re.sub(r'\*\*', '', sanitized)  # Remove bold **
+        sanitized = re.sub(r'\*', '', sanitized)    # Remove italic *
+        sanitized = re.sub(r'`', '', sanitized)     # Remove code backticks
+        
+        # Collapse multiple spaces into one
+        sanitized = re.sub(r'\s+', ' ', sanitized)
+        
+        # Trim whitespace
+        sanitized = sanitized.strip()
+        
+        # Truncate to Twitch's 500 character limit
+        if len(sanitized) > 500:
+            sanitized = sanitized[:497] + "..."
+        
+        return sanitized
     
     def parse_message(self, raw_line):
         """Parse IRC message and extract information."""
