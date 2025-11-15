@@ -1,1 +1,1 @@
-# Twitch Clapback Bot (Python Edition)
+# Twitch Roaster Bot
