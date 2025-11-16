@@ -21,7 +21,6 @@ class SimpleTwitchRoastBot:
         self.socket = None
         self.running = False
         self.message_count = 0
-        print(os.environ['Greets'])
 
     def connect(self):
         """Connect to Twitch IRC servers."""
@@ -143,18 +142,29 @@ class SimpleTwitchRoastBot:
         if username.lower() == self.nickname.lower():
             return
         
+        SYSTEM_PROMPT = (
+        "You are an offensive-language detector. "
+        "Given a user message, determine whether it is offensive. "
+        "Always respond ONLY with a JSON dictionary like this:\n\n"
+        "{\n"
+        "  \"offensive\": true/false,\n"
+        "  \"response\": \"a witty clapback\"\n"
+        "}\n\n"
+        "Do NOT include anything else."
+        )
 
         payload = {
             "model": "gemma3:4b",
             "prompt": message,
-            "stream": False
+            "stream": False,
+            "system": SYSTEM_PROMPT
         }
 
         response = requests.post(MODEL_URL, json=payload)
-        # print(response.json()["response"])
+        print(response.json()["response"])
 
 
-        self.send_chat_message(response.json()["response"])
+        # self.send_chat_message(response.json()["response"])
         
        
     def listen(self):
