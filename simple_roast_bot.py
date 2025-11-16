@@ -3,242 +3,132 @@ import re
 import os
 from dotenv import load_dotenv
 import requests
+from twitchAPI.twitch import Twitch
+from twitchAPI.oauth import UserAuthenticator
+from twitchAPI.type import AuthScope, ChatEvent
+from twitchAPI.chat import Chat, EventData, ChatMessage, ChatSub, ChatCommand
+import asyncio
 
 load_dotenv()
 
-ACCESS_TOKEN =  os.getenv('TWITCH_OAUTH_TOKEN')
-CHANNEL = os.getenv('TWITCH_CHANNEL')
 BOT_NAME = os.getenv('TWITCH_BOT_USERNAME')
 MODEL_URL = os.getenv('MODEL_API_URL')
+APP_ID  = os.getenv('CLIENT_ID')
+APP_SECRET  = os.getenv('CLIENT_SECRET')
+USER_SCOPE = [AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
+TARGET_CHANNEL = os.getenv('TWITCH_CHANNEL')
 
-class SimpleTwitchRoastBot:
-    """Simple roast bot for inappropriate content."""
-    
-    def __init__(self, token, channel, nickname):
-        self.token = token
-        self.channel = channel.lower()
-        self.nickname = nickname.lower()
-        self.socket = None
-        self.running = False
-        self.message_count = 0
-
-    def connect(self):
-        """Connect to Twitch IRC servers."""
-        print("[*] Connecting to Twitch IRC...")
-        
-        server = 'irc.chat.twitch.tv'
-        port = 6667
-        
-        try:
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.socket.connect((server, port))
-            
-            # Authenticate
-            self.send_raw(f"PASS oauth:{self.token}")
-            self.send_raw(f"NICK {self.nickname}")
-            self.send_raw(f"JOIN #{self.channel}")
-            
-            # Request tags
-            self.send_raw("CAP REQ :twitch.tv/tags")
-            self.send_raw("CAP REQ :twitch.tv/commands")
-            
-            print(f"[+] Connected to #{self.channel} as {self.nickname}")
-            print(f"[>] Roast bot is active! Monitoring for inappropriate content...")
-            print("-" * 70)
-            
-            self.running = True
-            return True
-            
-        except Exception as e:
-            print(f"[-] Connection failed: {e}")
-            return False
-    
-    def send_raw(self, message):
-        """Send raw IRC message."""
-        if self.socket:
-            self.socket.send(f"{message}\r\n".encode('utf-8'))
-    
-    def send_chat_message(self, message):
-        """Send a message to the Twitch chat channel."""
-        if self.socket and self.running:
-            # Sanitize message: remove newlines, clean up formatting
-            sanitized = self.sanitize_message(message)
-            chat_msg = f"PRIVMSG #{self.channel} :{sanitized}"
-            self.send_raw(chat_msg)
-            print(f"[ROAST SENT] {sanitized}")
-    
-    def sanitize_message(self, message):
-        """Clean up message for Twitch chat - remove newlines and format properly."""
-        # Replace newlines with spaces
-        sanitized = message.replace('\n', ' ').replace('\r', ' ')
-        
-        # Remove markdown formatting
-        sanitized = re.sub(r'\*\*', '', sanitized)  # Remove bold **
-        sanitized = re.sub(r'\*', '', sanitized)    # Remove italic *
-        sanitized = re.sub(r'`', '', sanitized)     # Remove code backticks
-        
-        # Collapse multiple spaces into one
-        sanitized = re.sub(r'\s+', ' ', sanitized)
-        
-        # Trim whitespace
-        sanitized = sanitized.strip()
-        
-        # Truncate to Twitch's 500 character limit
-        if len(sanitized) > 500:
-            sanitized = sanitized[:497] + "..."
-        
-        return sanitized
-    
-    def parse_message(self, raw_line):
-        """Parse IRC message and extract information."""
-        line = raw_line.strip()
-        
-        if not line or line.startswith('PING') or ':tmi.twitch.tv' in line:
-            return None
-        
-        if 'PRIVMSG' not in line:
-            return None
-        
-        try:
-            parts = line.split(':', 2)
-            if len(parts) < 3:
-                return None
-            
-            tags_and_prefix = parts[0] + ':' + parts[1]
-            message_content = parts[2]
-            
-            privmsg_match = re.search(r':(\w+)!\w+@\w+\.tmi\.twitch\.tv PRIVMSG #(\w+)', tags_and_prefix)
-            if not privmsg_match:
-                return None
-            
-            username = privmsg_match.group(1)
-            channel = privmsg_match.group(2)
-            
-            return {
-                'username': username,
-                'channel': channel,
-                'message': message_content,
-                'raw': line
-            }
-            
-        except Exception as e:
-            print(f"Parse error: {e}")
-            return None
-    
-    
-    def handle_message(self, msg_data):
-        """Handle incoming chat message and check for inappropriate content."""
-        if not msg_data:
-            return
-        
-        self.message_count += 1
-        print(msg_data)
-        username = msg_data['username']
-        message = msg_data['message']
-        
-        print(f"\n[MSG #{self.message_count}] {username}: {message}")
-        
-        # Don't respond to our own messages
-        if username.lower() == self.nickname.lower():
-            return
-        
-        SYSTEM_PROMPT = (
-        "You are an offensive-language detector. "
-        "Given a user message, determine whether it is offensive. "
-        "Always respond ONLY with a JSON dictionary like this:\n\n"
-        "{\n"
-        "  \"offensive\": true/false,\n"
-        "  \"response\": \"a witty clapback\"\n"
-        "}\n\n"
-        "Do NOT include anything else."
-        )
-
-        payload = {
-            "model": "gemma3:4b",
-            "prompt": message,
-            "stream": False,
-            "system": SYSTEM_PROMPT
-        }
-
-        response = requests.post(MODEL_URL, json=payload)
-        print(response.json()["response"])
+# this will be called when the event READY is triggered, which will be on bot start
+async def on_ready(ready_event: EventData):
+    print('Bot is ready for work, joining channels')
+    # join our target channel, if you want to join multiple, either call join for each individually
+    # or even better pass a list of channels as the argument
+    await ready_event.chat.join_room(TARGET_CHANNEL)
+    # you can do other bot initialization things in here
 
 
-        # self.send_chat_message(response.json()["response"])
-        
-       
-    def listen(self):
-        """Listen for incoming messages."""
-        if not self.socket:
-            print("[-] Not connected!")
-            return
-        
-        try:
-            while self.running:
-                response = self.socket.recv(2048).decode('utf-8', errors='ignore')
-                
-                if not response:
-                    print("[-] Connection lost!")
-                    break
-                
-                lines = response.split('\r\n')
-                
-                for line in lines:
-                    if not line:
-                        continue
-                    
-                    # Handle PING
-                    if line.startswith('PING'):
-                        self.send_raw('PONG :tmi.twitch.tv')
-                        continue
-                    
-                    # Parse and handle chat messages
-                    print(line)
-                    msg_data = self.parse_message(line)
-                    if msg_data:
-                        self.handle_message(msg_data)
-        
-        except KeyboardInterrupt:
-            print("\n[-] Stopping roast bot...")
-        except Exception as e:
-            print(f"[-] Listen error: {e}")
-        finally:
-            self.disconnect()
-    
-    def disconnect(self):
-        """Disconnect from IRC."""
-        self.running = False
-        if self.socket:
-            try:
-                self.socket.close()
-                print("[*] Disconnected from Twitch IRC")
-            except:
-                pass
+# this will be called whenever a message in a channel was send by either the bot OR another user
+async def on_message(msg: ChatMessage):
+    print(f'in {msg.room.name}, {msg.user.name} said: {msg.text}')
 
-def main():
-    """Main function to run the roast bot."""
-    print("[*] TWITCH ROAST BOT - INAPPROPRIATE CONTENT DETECTOR")
-    print("=" * 60)
-    print("[*] This bot detects inappropriate content and sends roasts!")
-    print("[*] Detection includes: inappropriate words, excessive caps, spam")
-    print("=" * 60)
-    print(f"[*] Token: oauth:{ACCESS_TOKEN[:8]}...")
-    print(f"[*] Channel: {CHANNEL}")
-    print(f"[*] Bot: {BOT_NAME}")
-    print("=" * 60)
-    print()
-    
-    # Create roast bot
-    bot = SimpleTwitchRoastBot(ACCESS_TOKEN, CHANNEL, BOT_NAME)
-    
-    # Connect and start monitoring
-    if bot.connect():
-        try:
-            bot.listen()
-        except KeyboardInterrupt:
-            print("\n[-] Roast bot stopped!")
-    else:
-        print("\n[-] Failed to connect. Check your credentials!")
 
-if __name__ == "__main__":
-    main()
+# this is where we set up the bot
+async def run():
+    # set up twitch api instance and add user authentication with some scopes
+    twitch = await Twitch(APP_ID, APP_SECRET)
+    auth = UserAuthenticator(twitch, USER_SCOPE)
+    token, refresh_token = await auth.authenticate()
+    await twitch.set_user_authentication(token, USER_SCOPE, refresh_token)
+
+    # create chat instance
+    chat = await Chat(twitch)
+
+    # register the handlers for the events you want
+
+    # listen to when the bot is done starting up and ready to join channels
+    chat.register_event(ChatEvent.READY, on_ready)
+    # listen to chat messages
+    chat.register_event(ChatEvent.MESSAGE, on_message)
+
+
+    # we are done with our setup, lets start this bot up!
+    chat.start()
+
+    # lets run till we press enter in the console
+    try:
+        input('press ENTER to stop\\n')
+    finally:
+        # now we can close the chat bot and the twitch api client
+        chat.stop()
+        await twitch.close()
+
+
+# lets run our setup
+asyncio.run(run())
+
+
+    
+def sanitize_message(self, message):
+    """Clean up message for Twitch chat - remove newlines and format properly."""
+    # Replace newlines with spaces
+    sanitized = message.replace('\n', ' ').replace('\r', ' ')
+    
+    # Remove markdown formatting
+    sanitized = re.sub(r'\*\*', '', sanitized)  # Remove bold **
+    sanitized = re.sub(r'\*', '', sanitized)    # Remove italic *
+    sanitized = re.sub(r'`', '', sanitized)     # Remove code backticks
+    
+    # Collapse multiple spaces into one
+    sanitized = re.sub(r'\s+', ' ', sanitized)
+    
+    # Trim whitespace
+    sanitized = sanitized.strip()
+    
+    # Truncate to Twitch's 500 character limit
+    if len(sanitized) > 500:
+        sanitized = sanitized[:497] + "..."
+    
+    return sanitized
+
+   
+
+
+def handle_message(self, msg_data):
+    """Handle incoming chat message and check for inappropriate content."""
+    if not msg_data:
+        return
+    
+    self.message_count += 1
+    print(msg_data)
+    username = msg_data['username']
+    message = msg_data['message']
+    
+    print(f"\n[MSG #{self.message_count}] {username}: {message}")
+    
+    # Don't respond to our own messages
+    if username.lower() == self.nickname.lower():
+        return
+    
+    SYSTEM_PROMPT = (
+    "You are an offensive-language detector. "
+    "Given a user message, determine whether it is offensive. "
+    "Always respond ONLY with a JSON dictionary like this:\n\n"
+    "{\n"
+    "  \"offensive\": true/false,\n"
+    "  \"response\": \"a witty clapback\"\n"
+    "}\n\n"
+    "Do NOT include anything else."
+    )
+
+    payload = {
+        "model": "gemma3:4b",
+        "prompt": message,
+        "stream": False,
+        "system": SYSTEM_PROMPT
+    }
+
+    response = requests.post(MODEL_URL, json=payload)
+    print(response.json()["response"])
+
+
+    # self.send_chat_message(response.json()["response"])
