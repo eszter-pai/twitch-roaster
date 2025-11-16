@@ -11,6 +11,7 @@ from twitchAPI.type import AuthScope, ChatEvent
 from twitchAPI.chat import Chat, EventData, ChatMessage, ChatSub, ChatCommand
 import asyncio
 import random
+from collections import deque, defaultdict
 
 load_dotenv()
 
@@ -21,6 +22,10 @@ APP_SECRET  = os.getenv('CLIENT_SECRET')
 USER_SCOPE = [AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
 TARGET_CHANNEL = os.getenv('TWITCH_CHANNEL')
 TOKEN_FILE = 'twitch_tokens.json'
+
+# Message history storage
+general_chat_history = deque(maxlen=10)  # Last 10 messages from all users
+user_chat_history = defaultdict(lambda: deque(maxlen=5))  # Last 5 messages per user
 
 def sanitize_message(message):
     """Clean up message for Twitch chat - remove newlines and format properly."""
@@ -61,6 +66,32 @@ async def on_message(msg: ChatMessage):
     if msg.user.name.lower() == BOT_NAME.lower():
         return
     
+    # Build context from message history
+    context_parts = []
+    
+    # Add recent general chat history
+    # if general_chat_history:
+    #     context_parts.append("Recent chat context:")
+    #     for chat_msg in general_chat_history:
+    #         context_parts.append(f"  {chat_msg['username']}: {chat_msg['message']}")
+    
+    # Add this user's message history
+    username = msg.user.name.lower()
+    if user_chat_history[username]:
+        context_parts.append(f"\n{msg.user.name}'s recent messages:")
+        for user_msg in user_chat_history[username]:
+            context_parts.append(f"  {user_msg}")
+    
+    # Add current message
+    context_parts.append(f"\nCurrent message from {msg.user.name}: {msg.text}")
+    
+    message_context = "\n".join(context_parts)
+    print(message_context)
+    
+    # Store this message in history before processing
+    # general_chat_history.append({"username": msg.user.name, "message": msg.text})
+    user_chat_history[username].append(msg.text)
+    
     # Call LLM to check for offensive content
     SYSTEM_PROMPT = (
         "You are a chat moderator for smopotat's Twitch channel. The streamer is an Asian woman playing The Witcher 3. "
@@ -73,7 +104,9 @@ async def on_message(msg: ChatMessage):
         "- Harassment or targeted attacks\n"
         "- Requests to add on Steam, Discord, Instagram, or other social platforms\n"
         "- Trauma dumping or oversharing personal problems\n\n"
-        "Analyze the user's message and respond ONLY with a JSON object in this exact format:\n"
+        "You will be given the recent chat context and the user's message history. "
+        "Use this context to detect patterns, escalation, or repeated boundary testing.\n\n"
+        "Analyze the message and respond ONLY with a JSON object in this exact format:\n"
         "{\n"
         '  "appropriate": true/false,\n'
         '  "response": "a clever, witty clapback that calls out the behavior without being overly harsh"\n'
@@ -84,7 +117,7 @@ async def on_message(msg: ChatMessage):
 
     payload = {
         "model": "gemma3:4b",
-        "prompt": msg.text,
+        "prompt": message_context,
         "stream": False,
         "system": SYSTEM_PROMPT,
         "format": "json"
