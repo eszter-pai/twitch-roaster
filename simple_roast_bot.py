@@ -33,6 +33,13 @@ async def on_ready(ready_event: EventData):
 # this will be called whenever a message in a channel was send by either the bot OR another user
 async def on_message(msg: ChatMessage):
     print(f'in {msg.room.name}, {msg.user.name} said: {msg.text}')
+    
+    # Don't respond to our own messages
+    if msg.user.name.lower() == BOT_NAME.lower():
+        return
+    
+    # Send a simple reply
+    await msg.reply(f'Hello {msg.user.name}, you said: {msg.text}')
 
 
 # this is where we set up the bot
