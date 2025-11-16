@@ -10,6 +10,7 @@ from twitchAPI.oauth import UserAuthenticator, refresh_access_token
 from twitchAPI.type import AuthScope, ChatEvent
 from twitchAPI.chat import Chat, EventData, ChatMessage, ChatSub, ChatCommand
 import asyncio
+import random
 
 load_dotenv()
 
@@ -20,6 +21,28 @@ APP_SECRET  = os.getenv('CLIENT_SECRET')
 USER_SCOPE = [AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
 TARGET_CHANNEL = os.getenv('TWITCH_CHANNEL')
 TOKEN_FILE = 'twitch_tokens.json'
+
+def sanitize_message(message):
+    """Clean up message for Twitch chat - remove newlines and format properly."""
+    # Replace newlines with spaces
+    sanitized = message.replace('\n', ' ').replace('\r', ' ')
+    
+    # Remove markdown formatting
+    sanitized = re.sub(r'\*\*', '', sanitized)  # Remove bold **
+    sanitized = re.sub(r'\*', '', sanitized)    # Remove italic *
+    sanitized = re.sub(r'`', '', sanitized)     # Remove code backticks
+    
+    # Collapse multiple spaces into one
+    sanitized = re.sub(r'\s+', ' ', sanitized)
+    
+    # Trim whitespace
+    sanitized = sanitized.strip()
+    
+    # Truncate to Twitch's 500 character limit
+    if len(sanitized) > 500:
+        sanitized = sanitized[:497] + "..."
+    
+    return sanitized
 
 # this will be called when the event READY is triggered, which will be on bot start
 async def on_ready(ready_event: EventData):
@@ -38,8 +61,58 @@ async def on_message(msg: ChatMessage):
     if msg.user.name.lower() == BOT_NAME.lower():
         return
     
-    # Send a simple reply
-    await msg.reply(f'Hello {msg.user.name}, you said: {msg.text}')
+    # Call LLM to check for offensive content
+    SYSTEM_PROMPT = (
+        "You are a chat moderator for smopotat's Twitch channel. The streamer is an Asian woman playing The Witcher 3. "
+        "Your job is to detect inappropriate messages and respond with witty, clever clapbacks.\n\n"
+        "INAPPROPRIATE content includes:\n"
+        "- Racism or racist remarks\n"
+        "- Sexism or sexist remarks\n"
+        "- Sexual or sexualized comments\n"
+        "- Political discussions\n"
+        "- Harassment or targeted attacks\n"
+        "- Requests to add on Steam, Discord, Instagram, or other social platforms\n"
+        "- Trauma dumping or oversharing personal problems\n\n"
+        "Analyze the user's message and respond ONLY with a JSON object in this exact format:\n"
+        "{\n"
+        '  "appropriate": true/false,\n'
+        '  "response": "a clever, witty clapback that calls out the behavior without being overly harsh"\n'
+        "}\n\n"
+        "If appropriate is false, the response should be a smart comeback that shuts down the inappropriate behavior. "
+        "Keep responses short, punchy, and entertaining for chat."
+    )
+
+    payload = {
+        "model": "gemma3:4b",
+        "prompt": msg.text,
+        "stream": False,
+        "system": SYSTEM_PROMPT,
+        "format": "json"
+    }
+
+    try:
+        response = requests.post(MODEL_URL, json=payload)
+        llm_response = response.json()["response"]
+        print(f"LLM Response: {llm_response}")
+        
+        # Parse the JSON response
+        result = json.loads(llm_response)
+        
+        should_respond = False
+        if not result.get("appropriate", True):
+            # Always respond to inappropriate messages
+            should_respond = True
+        else:
+            # 5% chance to respond to appropriate messages
+            should_respond = random.random() < 0.05
+        
+        if should_respond:
+            # Sanitize and send the clapback
+            clapback = sanitize_message(result.get("response", ""))
+            if clapback:
+                await msg.reply(clapback)
+    except Exception as e:
+        print(f"Error processing message: {e}")
 
 
 # this is where we set up the bot
@@ -112,70 +185,3 @@ async def run():
 
 # lets run our setup
 asyncio.run(run())
-
-
-    
-def sanitize_message(self, message):
-    """Clean up message for Twitch chat - remove newlines and format properly."""
-    # Replace newlines with spaces
-    sanitized = message.replace('\n', ' ').replace('\r', ' ')
-    
-    # Remove markdown formatting
-    sanitized = re.sub(r'\*\*', '', sanitized)  # Remove bold **
-    sanitized = re.sub(r'\*', '', sanitized)    # Remove italic *
-    sanitized = re.sub(r'`', '', sanitized)     # Remove code backticks
-    
-    # Collapse multiple spaces into one
-    sanitized = re.sub(r'\s+', ' ', sanitized)
-    
-    # Trim whitespace
-    sanitized = sanitized.strip()
-    
-    # Truncate to Twitch's 500 character limit
-    if len(sanitized) > 500:
-        sanitized = sanitized[:497] + "..."
-    
-    return sanitized
-
-   
-
-
-def handle_message(self, msg_data):
-    """Handle incoming chat message and check for inappropriate content."""
-    if not msg_data:
-        return
-    
-    self.message_count += 1
-    print(msg_data)
-    username = msg_data['username']
-    message = msg_data['message']
-    
-    print(f"\n[MSG #{self.message_count}] {username}: {message}")
-    
-    # Don't respond to our own messages
-    if username.lower() == self.nickname.lower():
-        return
-    
-    SYSTEM_PROMPT = (
-    "You are an offensive-language detector. "
-    "Given a user message, determine whether it is offensive. "
-    "Always respond ONLY with a JSON dictionary like this:\n\n"
-    "{\n"
-    "  \"offensive\": true/false,\n"
-    "  \"response\": \"a witty clapback\"\n"
-    "}\n\n"
-    "Do NOT include anything else."
-    )
-
-    payload = {
-        "model": "gemma3:4b",
-        "prompt": message,
-        "stream": False,
-        "system": SYSTEM_PROMPT
-    }
-
-    response = requests.post(MODEL_URL, json=payload)
-    print(response.json()["response"])
-
-
-    # self.send_chat_message(response.json()["response"])
