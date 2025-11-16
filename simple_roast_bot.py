@@ -1,10 +1,12 @@
 import socket
 import re
 import os
+import json
+from pathlib import Path
 from dotenv import load_dotenv
 import requests
 from twitchAPI.twitch import Twitch
-from twitchAPI.oauth import UserAuthenticator
+from twitchAPI.oauth import UserAuthenticator, refresh_access_token
 from twitchAPI.type import AuthScope, ChatEvent
 from twitchAPI.chat import Chat, EventData, ChatMessage, ChatSub, ChatCommand
 import asyncio
@@ -17,6 +19,7 @@ APP_ID  = os.getenv('CLIENT_ID')
 APP_SECRET  = os.getenv('CLIENT_SECRET')
 USER_SCOPE = [AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
 TARGET_CHANNEL = os.getenv('TWITCH_CHANNEL')
+TOKEN_FILE = 'twitch_tokens.json'
 
 # this will be called when the event READY is triggered, which will be on bot start
 async def on_ready(ready_event: EventData):
@@ -36,8 +39,45 @@ async def on_message(msg: ChatMessage):
 async def run():
     # set up twitch api instance and add user authentication with some scopes
     twitch = await Twitch(APP_ID, APP_SECRET)
-    auth = UserAuthenticator(twitch, USER_SCOPE)
-    token, refresh_token = await auth.authenticate()
+    
+    # Try to load existing tokens
+    token = None
+    refresh_token = None
+    
+    if Path(TOKEN_FILE).exists():
+        try:
+            with open(TOKEN_FILE, 'r') as f:
+                tokens = json.load(f)
+                token = tokens.get('token')
+                refresh_token = tokens.get('refresh_token')
+            print('Loaded existing tokens from file')
+            
+            # Try to refresh the token
+            try:
+                token, refresh_token = await refresh_access_token(refresh_token, APP_ID, APP_SECRET)
+                print('Successfully refreshed token')
+                # Save the new tokens
+                with open(TOKEN_FILE, 'w') as f:
+                    json.dump({'token': token, 'refresh_token': refresh_token}, f)
+            except Exception as e:
+                print(f'Failed to refresh token: {e}')
+                token = None
+                refresh_token = None
+        except Exception as e:
+            print(f'Failed to load tokens: {e}')
+            token = None
+            refresh_token = None
+    
+    # If we don't have valid tokens, authenticate (opens browser)
+    if not token or not refresh_token:
+        print('No valid tokens found, starting authentication...')
+        auth = UserAuthenticator(twitch, USER_SCOPE)
+        token, refresh_token = await auth.authenticate()
+        # Save tokens for future use
+        with open(TOKEN_FILE, 'w') as f:
+            json.dump({'token': token, 'refresh_token': refresh_token}, f)
+        print(f'Tokens saved to {TOKEN_FILE}')
+    
     await twitch.set_user_authentication(token, USER_SCOPE, refresh_token)
 
     # create chat instance
