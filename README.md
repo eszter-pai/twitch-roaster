@@ -16,7 +16,7 @@ A Twitch chat moderation bot that uses AI to detect and respond to inappropriate
 - The trained ML classifier (using Twitter hate speech data) cannot detect subtle sexism/racism like "do you eat dogs" or "is it pink". 
 
 **Current workaround:** Using DeepSeek API for all message evaluation instead.
-**Things I can try:** Zero shot classification?
+**Things I can try:** Zero shot classification? Trasformer Models (HateBERT)?
 
 ### 2. Ollama Performance Issues
 Running Ollama with gemma3:4b locally uses too many resources to run while streaming.

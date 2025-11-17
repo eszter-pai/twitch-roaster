@@ -37,6 +37,8 @@ deepseek_client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepsee
 
 # Message history storage
 general_chat_history = deque(maxlen=10)  # Last 10 messages from all users
+user_message_history = defaultdict(lambda: deque(maxlen=3))  # Last 3 messages per user
+user_called_out = defaultdict(bool)  # Track if user was recently called out
 
 def preprocess_text(text):
     """Preprocess text for classifier (same as training)."""
@@ -88,6 +90,14 @@ async def on_message(msg: ChatMessage):
     if msg.user.name.lower() == BOT_NAME.lower():
         return
     
+    # Get user's message history
+    username = msg.user.name
+    user_history = list(user_message_history[username])
+    was_called_out = user_called_out[username]
+    
+    # Add current message to history
+    user_message_history[username].append(msg.text)
+    
     # # Step 1: Use classifier to detect if message is offensive
     # clean_text = preprocess_text(msg.text)
     # is_offensive = classifier.predict([clean_text])[0]
@@ -95,8 +105,19 @@ async def on_message(msg: ChatMessage):
     # 
     # print(f"Classifier: {'OFFENSIVE' if is_offensive == 1 else 'NOT OFFENSIVE'} (confidence: {confidence[is_offensive]:.2%})")
     
-    # Call DeepSeek to determine if message is offensive and get clapback
-    user_context = f"Username: {msg.user.name}\nMessage: {msg.text}"
+    # Build user context with message history
+    user_context = f"Username: {msg.user.name}\n"
+    
+    if user_history:
+        user_context += "Previous messages from this user:\n"
+        for i, prev_msg in enumerate(user_history, 1):
+            user_context += f"  {i}. {prev_msg}\n"
+    
+    user_context += f"\nCurrent message: {msg.text}"
+    
+    if was_called_out:
+        user_context += "\n\n[NOTE: This user was previously called out for inappropriate behavior]"
+    
     print(f"Calling DeepSeek with context:\n{user_context}")
     
     SYSTEM_PROMPT = (
@@ -110,14 +131,23 @@ async def on_message(msg: ChatMessage):
         "- Harassment or targeted attacks\n"
         "- Requests to add on Steam, Discord, Instagram, or other social platforms\n"
         "- Trauma dumping or oversharing personal problems\n\n"
-        "You will be given the username and their message. "
-        "Determine if the message is inappropriate based on the criteria above.\n\n"
-        "Respond with a clever, witty clapback that shuts down the inappropriate behavior without being overly harsh. "
-        "Keep responses short, punchy, and entertaining for chat.\n\n"
+        "CONTEXT-AWARE MODERATION:\n"
+        "You will be given the user's current message AND their recent message history (up to 2 previous messages). "
+        "Consider the full context when determining if behavior is inappropriate:\n"
+        "- A pattern of borderline comments may indicate inappropriate intent\n"
+        "- Repeated similar messages may suggest trolling or harassment\n"
+        "- Escalating behavior should be addressed more firmly\n\n"
+        "FORGIVENESS PRINCIPLE:\n"
+        "If a user was previously called out (indicated in the context), give them a chance to improve. "
+        "If their new message is genuinely appropriate and shows better behavior, mark it as appropriate. "
+        "Reset their 'called out' status by staying silent. However, if they continue inappropriate behavior "
+        "or ignore the previous callout, respond more firmly.\n\n"
+        "Respond with a witty, genz style clapback that shuts down inappropriate behavior without being overly harsh. "
+        "Keep responses like how a human chats, 1 sentence, punchy, genz style, and entertaining for chat.\n\n"
         "Respond ONLY with a JSON object in this exact format:\n"
         "{\n"
         '  "appropriate": false,\n'
-        '  "response": "your witty clapback here"\n'
+        '  "response": "your 1-sentence witty, genz style clapback here"\n'
         "}"
     )
     
@@ -129,7 +159,8 @@ async def on_message(msg: ChatMessage):
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_context}
             ],
-            stream=False
+            stream=False,
+            response_format={'type': 'json_object'}
         )
         
         llm_response = response.choices[0].message.content
@@ -143,8 +174,15 @@ async def on_message(msg: ChatMessage):
             clapback = sanitize_message(result.get("response", ""))
             if clapback:
                 await msg.reply(clapback)
+                # Mark user as called out
+                user_called_out[username] = True
+                print(f"User {username} has been called out.")
         else:
             print("DeepSeek determined message is appropriate, no response needed.")
+            # If user was previously called out but is now behaving, reset their status
+            if was_called_out:
+                user_called_out[username] = False
+                print(f"User {username} has improved behavior, resetting call-out status.")
             
     except Exception as e:
         print(f"Error calling DeepSeek: {e}")
