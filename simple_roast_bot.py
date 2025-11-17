@@ -98,6 +98,9 @@ async def on_message(msg: ChatMessage):
     # Add current message to history
     user_message_history[username].append(msg.text)
     
+    # Check if bot is tagged (mentioned)
+    is_bot_tagged = f"@{BOT_NAME}" in msg.text.lower() or BOT_NAME in msg.text.lower().split()
+    
     # # Step 1: Use classifier to detect if message is offensive
     # clean_text = preprocess_text(msg.text)
     # is_offensive = classifier.predict([clean_text])[0]
@@ -117,6 +120,9 @@ async def on_message(msg: ChatMessage):
     
     if was_called_out:
         user_context += "\n\n[NOTE: This user was previously called out for inappropriate behavior]"
+    
+    if is_bot_tagged:
+        user_context += "\n\n[IMPORTANT: The bot/streamer (smopotat) is tagged/mentioned in this message]"
     
     print(f"Calling DeepSeek with context:\n{user_context}")
     
@@ -142,6 +148,15 @@ async def on_message(msg: ChatMessage):
         "If their new message is genuinely appropriate and shows better behavior, mark it as appropriate. "
         "Reset their 'called out' status by staying silent. However, if they continue inappropriate behavior "
         "or ignore the previous callout, respond more firmly.\n\n"
+        "BOT TAGGED EXCEPTION:\n"
+        "If the bot/streamer is tagged or mentioned (indicated in the context), ALWAYS respond regardless of whether "
+        "the message is appropriate or inappropriate. When tagged:\n"
+        "- Sound very annoyed and done with everything\n"
+        "- Use gen-z slang and extremely casual language\n"
+        "- Keep it super short (like 3-8 words max)\n"
+        "- Be sarcastic, eye-rolling energy\n"
+        "- Examples: 'bro what do u want 💀', 'im literally gaming rn', 'why r u like this', 'not rn bestie'\n"
+        "- Mark as \"appropriate\": false so the bot sends the response\n\n"
         "Respond with a witty, genz style clapback that shuts down inappropriate behavior without being overly harsh. "
         "Keep responses like how a human chats, 1 sentence, punchy, genz style, and entertaining for chat.\n\n"
         "Respond ONLY with a JSON object in this exact format:\n"
