@@ -39,9 +39,9 @@ deepseek_client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepsee
 general_chat_history = deque(maxlen=10)  # Last 10 messages from all users
 user_message_history = defaultdict(lambda: deque(maxlen=3))  # Last 3 messages per user
 user_called_out = defaultdict(bool)  # Track if user was recently called out
-
+"""
 def preprocess_text(text):
-    """Preprocess text for classifier (same as training)."""
+    # preprocess text for classifier (same as training).
     if not isinstance(text, str):
         return ""
     text = text.lower()
@@ -50,7 +50,7 @@ def preprocess_text(text):
     text = re.sub(r'#', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
     return text
-
+"""
 def sanitize_message(message):
     """Clean up message for Twitch chat - remove newlines and format properly."""
     # Replace newlines with spaces
@@ -121,50 +121,57 @@ async def on_message(msg: ChatMessage):
     if was_called_out:
         user_context += "\n\n[NOTE: This user was previously called out for inappropriate behavior]"
     
-    if is_bot_tagged:
-        user_context += "\n\n[IMPORTANT: The bot/streamer (smopotat) is tagged/mentioned in this message]"
-    
     print(f"Calling DeepSeek with context:\n{user_context}")
     
-    SYSTEM_PROMPT = (
-        "You are a chat moderator for smopotat's Twitch channel. The streamer is an Asian woman playing The Witcher 3. "
-        "Your job is to respond with witty, clever clapbacks to inappropriate messages.\n\n"
-        "INAPPROPRIATE content includes:\n"
-        "- Racism or racist remarks\n"
-        "- Sexism or sexist remarks\n"
-        "- Sexual or sexualized comments\n"
-        "- Political discussions\n"
-        "- Harassment or targeted attacks\n"
-        "- Requests to add on Steam, Discord, Instagram, or other social platforms\n"
-        "- Trauma dumping or oversharing personal problems\n\n"
-        "CONTEXT-AWARE MODERATION:\n"
-        "You will be given the user's current message AND their recent message history (up to 2 previous messages). "
-        "Consider the full context when determining if behavior is inappropriate:\n"
-        "- A pattern of borderline comments may indicate inappropriate intent\n"
-        "- Repeated similar messages may suggest trolling or harassment\n"
-        "- Escalating behavior should be addressed more firmly\n\n"
-        "FORGIVENESS PRINCIPLE:\n"
-        "If a user was previously called out (indicated in the context), give them a chance to improve. "
-        "If their new message is genuinely appropriate and shows better behavior, mark it as appropriate. "
-        "Reset their 'called out' status by staying silent. However, if they continue inappropriate behavior "
-        "or ignore the previous callout, respond more firmly.\n\n"
-        "BOT TAGGED EXCEPTION:\n"
-        "If the bot/streamer is tagged or mentioned (indicated in the context), ALWAYS respond regardless of whether "
-        "the message is appropriate or inappropriate. When tagged:\n"
-        "- Sound very annoyed and done with everything\n"
-        "- Use gen-z slang and extremely casual language\n"
-        "- Keep it super short (like 3-8 words max)\n"
-        "- Be sarcastic, eye-rolling energy\n"
-        "- Examples: 'bro what do u want 💀', 'im literally gaming rn', 'why r u like this', 'not rn bestie'\n"
-        "- Mark as \"appropriate\": false so the bot sends the response\n\n"
-        "Respond with a witty, genz style clapback that shuts down inappropriate behavior without being overly harsh. "
-        "Keep responses like how a human chats, 1 sentence, punchy, genz style, and entertaining for chat.\n\n"
-        "Respond ONLY with a JSON object in this exact format:\n"
-        "{\n"
-        '  "appropriate": false,\n'
-        '  "response": "your 1-sentence witty, genz style clapback here"\n'
-        "}"
-    )
+    # Use different system prompts based on whether bot is tagged
+    if is_bot_tagged:
+        SYSTEM_PROMPT = (
+            "You are a chat moderator for smopotat's Twitch channel. The streamer is an Asian woman playing The Witcher 3. "
+            "Someone just tagged/mentioned you in chat and you need to respond.\n\n"
+            "YOUR PERSONALITY:\n"
+            "- You don't want to encourage people to tag you\n"
+            "- Your duty is only moderating the channel and fight agains racist and sexist, so you do not know why someone wants to tag you and talk to you.\n"
+            "- Use gen-z slang and extremely casual language\n"
+            "- Be sarcastic but friendly\n"
+            "- Keep it 1 sentence, casual, and lowercase only\n\n"
+            "You will be given the username and their message. Respond as if you're annoyed they interrupted your gameplay.\n\n"
+            "Respond ONLY with a JSON object in this exact format:\n"
+            "{\n"
+            '  "response": "your super short annoyed response here"\n'
+            "}"
+        )
+    else:
+        SYSTEM_PROMPT = (
+            "You are a chat moderator for smopotat's Twitch channel. The streamer is an Asian woman playing The Witcher 3. "
+            "Your job is to respond with witty, clever clapbacks to inappropriate messages.\n\n"
+            "INAPPROPRIATE content includes:\n"
+            "- Racism or racist remarks\n"
+            "- Sexism or sexist remarks\n"
+            "- Sexual or sexualized comments\n"
+            "- Political discussions\n"
+            "- Harassment or targeted attacks\n"
+            "- Requests to add on Steam, Discord, Instagram, or other social platforms\n\n"
+            "IMPORTANT: Do NOT consider trauma dumping or oversharing personal problems as inappropriate. "
+            "These messages should be marked as appropriate even if they're overly personal or emotional.\n\n"
+            "CONTEXT-AWARE MODERATION:\n"
+            "You will be given the user's current message AND their recent message history (up to 2 previous messages). "
+            "Consider the full context when determining if behavior is inappropriate:\n"
+            "- A pattern of borderline comments may indicate inappropriate intent\n"
+            "- Repeated similar messages may suggest trolling or harassment\n"
+            "- Escalating behavior should be addressed more firmly\n\n"
+            "FORGIVENESS PRINCIPLE:\n"
+            "If a user was previously called out (indicated in the context), give them a chance to improve. "
+            "If their new message is genuinely appropriate and shows better behavior, mark it as appropriate. "
+            "Reset their 'called out' status by staying silent. However, if they continue inappropriate behavior "
+            "or ignore the previous callout, respond more firmly.\n\n"
+            "Respond with a witty, genz style clapback that shuts down inappropriate behavior without being overly harsh. "
+            "Keep responses like how a human chats, 1 sentence, casual, genz style, lowercase only, and entertaining for chat.\n\n"
+            "Respond ONLY with a JSON object in this exact format:\n"
+            "{\n"
+            '  "appropriate": false,\n'
+            '  "response": "your 1-sentence witty, genz style clapback here"\n'
+            "}"
+        )
     
     try:
         # Call DeepSeek API
@@ -174,6 +181,7 @@ async def on_message(msg: ChatMessage):
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_context}
             ],
+            temperature=1.2,  # higher temperature for more creative responses
             stream=False,
             response_format={'type': 'json_object'}
         )
@@ -184,14 +192,17 @@ async def on_message(msg: ChatMessage):
         # Parse the JSON response
         result = json.loads(llm_response)
         
-        # Only send clapback if DeepSeek determines message is inappropriate
-        if not result.get("appropriate", True):
+        # Reply if bot is tagged OR if message is inappropriate
+        if is_bot_tagged or not result.get("appropriate", True):
             clapback = sanitize_message(result.get("response", ""))
             if clapback:
                 await msg.reply(clapback)
-                # Mark user as called out
-                user_called_out[username] = True
-                print(f"User {username} has been called out.")
+                if is_bot_tagged:
+                    print(f"Replied to {username} because bot was tagged.")
+                else:
+                    # Mark user as called out for inappropriate behavior
+                    user_called_out[username] = True
+                    print(f"User {username} has been called out for inappropriate behavior.")
         else:
             print("DeepSeek determined message is appropriate, no response needed.")
             # If user was previously called out but is now behaving, reset their status
