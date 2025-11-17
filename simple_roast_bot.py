@@ -12,20 +12,42 @@ from twitchAPI.chat import Chat, EventData, ChatMessage, ChatSub, ChatCommand
 import asyncio
 import random
 from collections import deque, defaultdict
+import joblib
+from openai import OpenAI
 
 load_dotenv()
 
 BOT_NAME = os.getenv('TWITCH_BOT_USERNAME')
-MODEL_URL = os.getenv('MODEL_API_URL')
+MODEL_URL = os.getenv('MODEL_API_URL')  # Ollama URL (kept for fallback)
 APP_ID  = os.getenv('CLIENT_ID')
 APP_SECRET  = os.getenv('CLIENT_SECRET')
+DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY')
 USER_SCOPE = [AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
 TARGET_CHANNEL = os.getenv('TWITCH_CHANNEL')
 TOKEN_FILE = 'twitch_tokens.json'
+CLASSIFIER_MODEL = 'offensive_classifier.joblib'
+
+# Load the trained classifier
+# print('Loading offensive message classifier...')
+# classifier = joblib.load(CLASSIFIER_MODEL)
+# print('Classifier loaded successfully!')
+
+# Initialize DeepSeek client
+deepseek_client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
 
 # Message history storage
 general_chat_history = deque(maxlen=10)  # Last 10 messages from all users
-user_chat_history = defaultdict(lambda: deque(maxlen=5))  # Last 5 messages per user
+
+def preprocess_text(text):
+    """Preprocess text for classifier (same as training)."""
+    if not isinstance(text, str):
+        return ""
+    text = text.lower()
+    text = re.sub(r'http\S+|www\S+|https\S+', '', text, flags=re.MULTILINE)
+    text = re.sub(r'@\w+', '', text)
+    text = re.sub(r'#', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
 
 def sanitize_message(message):
     """Clean up message for Twitch chat - remove newlines and format properly."""
@@ -66,36 +88,20 @@ async def on_message(msg: ChatMessage):
     if msg.user.name.lower() == BOT_NAME.lower():
         return
     
-    # Build context from message history
-    context_parts = []
+    # # Step 1: Use classifier to detect if message is offensive
+    # clean_text = preprocess_text(msg.text)
+    # is_offensive = classifier.predict([clean_text])[0]
+    # confidence = classifier.predict_proba([clean_text])[0]
+    # 
+    # print(f"Classifier: {'OFFENSIVE' if is_offensive == 1 else 'NOT OFFENSIVE'} (confidence: {confidence[is_offensive]:.2%})")
     
-    # Add recent general chat history
-    # if general_chat_history:
-    #     context_parts.append("Recent chat context:")
-    #     for chat_msg in general_chat_history:
-    #         context_parts.append(f"  {chat_msg['username']}: {chat_msg['message']}")
+    # Call DeepSeek to determine if message is offensive and get clapback
+    user_context = f"Username: {msg.user.name}\nMessage: {msg.text}"
+    print(f"Calling DeepSeek with context:\n{user_context}")
     
-    # Add this user's message history
-    username = msg.user.name.lower()
-    if user_chat_history[username]:
-        context_parts.append(f"\n{msg.user.name}'s recent messages:")
-        for user_msg in user_chat_history[username]:
-            context_parts.append(f"  {user_msg}")
-    
-    # Add current message
-    context_parts.append(f"\nCurrent message from {msg.user.name}: {msg.text}")
-    
-    message_context = "\n".join(context_parts)
-    print(message_context)
-    
-    # Store this message in history before processing
-    # general_chat_history.append({"username": msg.user.name, "message": msg.text})
-    user_chat_history[username].append(msg.text)
-    
-    # Call LLM to check for offensive content
     SYSTEM_PROMPT = (
         "You are a chat moderator for smopotat's Twitch channel. The streamer is an Asian woman playing The Witcher 3. "
-        "Your job is to detect inappropriate messages and respond with witty, clever clapbacks.\n\n"
+        "Your job is to respond with witty, clever clapbacks to inappropriate messages.\n\n"
         "INAPPROPRIATE content includes:\n"
         "- Racism or racist remarks\n"
         "- Sexism or sexist remarks\n"
@@ -104,48 +110,62 @@ async def on_message(msg: ChatMessage):
         "- Harassment or targeted attacks\n"
         "- Requests to add on Steam, Discord, Instagram, or other social platforms\n"
         "- Trauma dumping or oversharing personal problems\n\n"
-        "You will be given the recent chat context and the user's message history. "
-        "Use this context to detect patterns, escalation, or repeated boundary testing.\n\n"
-        "Analyze the message and respond ONLY with a JSON object in this exact format:\n"
+        "You will be given the username and their message. "
+        "Determine if the message is inappropriate based on the criteria above.\n\n"
+        "Respond with a clever, witty clapback that shuts down the inappropriate behavior without being overly harsh. "
+        "Keep responses short, punchy, and entertaining for chat.\n\n"
+        "Respond ONLY with a JSON object in this exact format:\n"
         "{\n"
-        '  "appropriate": true/false,\n'
-        '  "response": "a clever, witty clapback that calls out the behavior without being overly harsh"\n'
-        "}\n\n"
-        "If appropriate is false, the response should be a smart comeback that shuts down the inappropriate behavior. "
-        "Keep responses short, punchy, and entertaining for chat."
+        '  "appropriate": false,\n'
+        '  "response": "your witty clapback here"\n'
+        "}"
     )
-
-    payload = {
-        "model": "gemma3:4b",
-        "prompt": message_context,
-        "stream": False,
-        "system": SYSTEM_PROMPT,
-        "format": "json"
-    }
-
+    
     try:
-        response = requests.post(MODEL_URL, json=payload)
-        llm_response = response.json()["response"]
-        print(f"LLM Response: {llm_response}")
+        # Call DeepSeek API
+        response = deepseek_client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_context}
+            ],
+            stream=False
+        )
+        
+        llm_response = response.choices[0].message.content
+        print(f"DeepSeek Response: {llm_response}")
         
         # Parse the JSON response
         result = json.loads(llm_response)
         
-        should_respond = False
+        # Only send clapback if DeepSeek determines message is inappropriate
         if not result.get("appropriate", True):
-            # Always respond to inappropriate messages
-            should_respond = True
-        else:
-            # 5% chance to respond to appropriate messages
-            should_respond = random.random() < 0.05
-        
-        if should_respond:
-            # Sanitize and send the clapback
             clapback = sanitize_message(result.get("response", ""))
             if clapback:
                 await msg.reply(clapback)
+        else:
+            print("DeepSeek determined message is appropriate, no response needed.")
+            
     except Exception as e:
-        print(f"Error processing message: {e}")
+        print(f"Error calling DeepSeek: {e}")
+            # Fallback to Ollama if DeepSeek fails (optional)
+            # You can uncomment this section if you want Ollama as backup
+            # try:
+            #     payload = {
+            #         "model": "gemma3:4b",
+            #         "prompt": user_context,
+            #         "stream": False,
+            #         "system": SYSTEM_PROMPT,
+            #         "format": "json"
+            #     }
+            #     response = requests.post(MODEL_URL, json=payload)
+            #     llm_response = response.json()["response"]
+            #     result = json.loads(llm_response)
+            #     clapback = sanitize_message(result.get("response", ""))
+            #     if clapback:
+            #         await msg.reply(clapback)
+            # except Exception as e2:
+            #     print(f"Ollama fallback also failed: {e2}")
 
 
 # this is where we set up the bot
