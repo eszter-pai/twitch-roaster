@@ -151,7 +151,7 @@ async def on_message(msg: ChatMessage):
             "- Political discussions\n"
             "- Harassment or targeted attacks\n"
             "- Requests to add on Steam, Discord, Instagram, or other social platforms\n\n"
-            "IMPORTANT: Do NOT consider trauma dumping or oversharing personal problems as inappropriate. "
+            "IMPORTANT: Do NOT consider trauma dumping, oversharing personal problems, or emote spamming as inappropriate. "
             "These messages should be marked as appropriate even if they're overly personal or emotional.\n\n"
             "CONTEXT-AWARE MODERATION:\n"
             "You will be given the user's current message AND their recent message history (up to 2 previous messages). "
@@ -181,7 +181,7 @@ async def on_message(msg: ChatMessage):
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_context}
             ],
-            temperature=1.2,  # higher temperature for more creative responses
+            temperature=1.5,  # higher temperature for more creative responses
             stream=False,
             response_format={'type': 'json_object'}
         )
