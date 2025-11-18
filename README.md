@@ -42,8 +42,8 @@ Need smarter chat history handling:
 - [ ] Improve system prompt for nuanced decisions
 - [ ] teach bot use twitch emotes in responses 
 - [ ] abstract API calling logics to a separate module (so i can switch between different LLM providers just using.env variables)
-- [ ] zero shot classification?
-- [ ] Bot should reply when it is tagged, no matter if it is appropriate or not
+- [x] zero shot classification? (classifiers tried: hateBERT, LogReg on TF-IDF vectors, zero shot)
+- [x] Bot should reply when it is tagged, no matter if it is appropriate or not
 - [ ] Host bot on a server?
 - [ ] Web UI
 

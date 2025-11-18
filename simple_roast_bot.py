@@ -14,6 +14,7 @@ import random
 from collections import deque, defaultdict
 import joblib
 from openai import OpenAI
+from datetime import datetime, timedelta
 
 load_dotenv()
 
@@ -25,7 +26,8 @@ DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY')
 USER_SCOPE = [AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
 TARGET_CHANNEL = os.getenv('TWITCH_CHANNEL')
 TOKEN_FILE = 'twitch_tokens.json'
-CLASSIFIER_MODEL = 'offensive_classifier.joblib'
+CLASSIFIER_MODEL = 'offensive_classifier.joblib' # this is the trained logreg model
+
 
 # Load the trained classifier
 # print('Loading offensive message classifier...')
@@ -39,6 +41,51 @@ deepseek_client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepsee
 general_chat_history = deque(maxlen=10)  # Last 10 messages from all users
 user_message_history = defaultdict(lambda: deque(maxlen=3))  # Last 3 messages per user
 user_called_out = defaultdict(bool)  # Track if user was recently called out
+
+# 7TV Emote cache
+emote_list_cache = None
+emote_cache_time = None
+EMOTE_CACHE_DURATION = timedelta(hours=1)  # Refresh every hour
+
+def fetch_7tv_emotes():
+    """Fetch emotes from 7TV API and format them for the LLM."""
+    global emote_list_cache, emote_cache_time
+    
+    # Check if cache is still valid
+    if emote_list_cache and emote_cache_time:
+        if datetime.now() - emote_cache_time < EMOTE_CACHE_DURATION:
+            return emote_list_cache
+    
+    try:
+        # Fetch from 7TV API
+        response = requests.get(f'https://7tv.io/v3/users/{SEVENTV_USER_ID}')
+        response.raise_for_status()
+        data = response.json()
+        
+        # Extract emote names and descriptions
+        emotes = []
+        emote_set = data.get('emote_set', {})
+        for emote in emote_set.get('emotes', []):
+            name = emote.get('name', '')
+            # Some emotes have descriptions/tags that might be useful
+            if name:
+                emotes.append(name)
+        
+        # Format for prompt
+        if emotes:
+            emote_text = "Available 7TV emotes you can use: " + ", ".join(emotes)
+            emote_list_cache = emote_text
+            emote_cache_time = datetime.now()
+            print(f"Loaded {len(emotes)} 7TV emotes")
+            return emote_text
+        else:
+            return ""
+            
+    except Exception as e:
+        print(f"Error fetching 7TV emotes: {e}")
+        # Return cached version if available, otherwise empty
+        return emote_list_cache if emote_list_cache else ""
+
 """
 def preprocess_text(text):
     # preprocess text for classifier (same as training).
@@ -123,6 +170,9 @@ async def on_message(msg: ChatMessage):
     
     print(f"Calling DeepSeek with context:\n{user_context}")
     
+    # Fetch available emotes
+    # emote_context = fetch_7tv_emotes()
+    
     # Use different system prompts based on whether bot is tagged
     if is_bot_tagged:
         SYSTEM_PROMPT = (
@@ -133,7 +183,9 @@ async def on_message(msg: ChatMessage):
             "- Your duty is only moderating the channel and fight agains racist and sexist, so you do not know why someone wants to tag you and talk to you.\n"
             "- Use gen-z slang and extremely casual language\n"
             "- Be sarcastic but friendly\n"
-            "- Keep it 1 sentence, casual, and lowercase only\n\n"
+            "- Keep it 1 sentence, casual, and lowercase only\n"
+        #    "- You can use Twitch emotes in your responses to be more expressive\n\n"
+        #    f"{emote_context}\n\n"
             "You will be given the username and their message. Respond as if you're annoyed they interrupted your gameplay.\n\n"
             "Respond ONLY with a JSON object in this exact format:\n"
             "{\n"
@@ -143,13 +195,13 @@ async def on_message(msg: ChatMessage):
     else:
         SYSTEM_PROMPT = (
             "You are a chat moderator for smopotat's Twitch channel. The streamer is an Asian woman playing The Witcher 3. "
-            "Your job is to respond with witty, clever clapbacks to inappropriate messages.\n\n"
+            "Your job is to respond with witty, clever clapbacks to inappropriate messages and protect her from harmful statements.\n\n"
             "INAPPROPRIATE content includes:\n"
             "- Racism or racist remarks\n"
             "- Sexism or sexist remarks\n"
             "- Sexual or sexualized comments\n"
             "- Political discussions\n"
-            "- Harassment or targeted attacks\n"
+        #    "- Harassment or targeted attacks\n"
             "- Requests to add on Steam, Discord, Instagram, or other social platforms\n\n"
             "IMPORTANT: Do NOT consider trauma dumping, oversharing personal problems, or emote spamming as inappropriate. "
             "These messages should be marked as appropriate even if they're overly personal or emotional.\n\n"
@@ -165,7 +217,9 @@ async def on_message(msg: ChatMessage):
             "Reset their 'called out' status by staying silent. However, if they continue inappropriate behavior "
             "or ignore the previous callout, respond more firmly.\n\n"
             "Respond with a witty, genz style clapback that shuts down inappropriate behavior without being overly harsh. "
-            "Keep responses like how a human chats, 1 sentence, casual, genz style, lowercase only, and entertaining for chat.\n\n"
+            "Keep responses like how a human chats, 1 sentence, casual, genz style, lowercase only, and entertaining for chat. "
+        #    "You can use Twitch emotes in your responses to be more expressive.\n\n"
+        #    f"{emote_context}\n\n"
             "Respond ONLY with a JSON object in this exact format:\n"
             "{\n"
             '  "appropriate": false,\n'
