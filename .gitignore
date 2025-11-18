@@ -1,4 +1,4 @@
 .env
 twitch_tokens.json
 data
-offensive_classifier.joblib
+offensive_logreg_classifier.joblib
