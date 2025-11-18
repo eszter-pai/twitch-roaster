@@ -40,7 +40,7 @@ Need smarter chat history handling:
 - [ ] Figure out RAG implementation
 - [ ] Add intelligent chat history tracking
 - [ ] Improve system prompt for nuanced decisions
-- [ ] teach bot use twitch emotes in responses 
+- [ ] teach bot use twitch emotes in responses and recognize them in chat
 - [ ] abstract API calling logics to a separate module (so i can switch between different LLM providers just using.env variables)
 - [x] zero shot classification? (classifiers tried: hateBERT, LogReg on TF-IDF vectors, zero shot)
 - [x] Bot should reply when it is tagged, no matter if it is appropriate or not
