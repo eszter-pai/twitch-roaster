@@ -192,8 +192,7 @@ async def on_message(msg: ChatMessage):
     msg_lower = msg.text.lower()
     is_bot_tagged = (
         f"@{BOT_NAME.lower()}" in msg_lower or 
-        BOT_NAME.lower() in msg_lower.split() or 
-        "bot" in msg_lower.split()
+        BOT_NAME.lower() in msg_lower.split()
     )
     
     # # Step 1: Use classifier to detect if message is offensive
