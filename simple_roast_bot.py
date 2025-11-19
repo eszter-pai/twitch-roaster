@@ -219,6 +219,11 @@ async def on_message(msg: ChatMessage):
         user_context += "\n\n[NOTE: This user was previously called out for inappropriate behavior]"
     
     print(f"Calling DeepSeek with context:\n{user_context}")
+    # tb test: alyreariel: Go touch Reginald 
+    # @alyreariel: Which word triggered him? Touch?
+    # gelleroni: I think we need to make him way less sensitive. Only to clap back if its really certain.
+    # Okay, but this is valid - tropes of racism and stuff in the Witcher can inspire valuable discussion
+
 
     
     # Use different system prompts based on whether bot is tagged

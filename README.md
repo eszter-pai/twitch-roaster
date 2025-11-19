@@ -44,6 +44,7 @@ Need smarter chat history handling:
 - [x] zero shot classification? (classifiers tried: hateBERT, LogReg on TF-IDF vectors, zero shot)
 - [x] Bot should reply when it is tagged, no matter if it is appropriate or not
 - [ ] Host bot on a server?
+- [ ] Replace boolean output (True/False) with confidence score from DeepSeek
 - [ ] Web UI
 
 ## Setup
