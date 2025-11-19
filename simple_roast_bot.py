@@ -25,6 +25,7 @@ APP_SECRET  = os.getenv('CLIENT_SECRET')
 DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY')
 USER_SCOPE = [AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
 TARGET_CHANNEL = os.getenv('TWITCH_CHANNEL')
+EMOTE_USER_ID = os.getenv('SEVENTV_USER_ID')
 TOKEN_FILE = 'twitch_tokens.json'
 CLASSIFIER_MODEL = 'offensive_classifier.joblib' # this is the trained logreg model
 
@@ -45,44 +46,76 @@ user_called_out = defaultdict(bool)  # Track if user was recently called out
 # 7TV Emote cache
 emote_list_cache = None
 emote_cache_time = None
-EMOTE_CACHE_DURATION = timedelta(hours=1)  # Refresh every hour
+EMOTE_CACHE_DURATION = timedelta(seconds=10)  # Refresh every 10 seconds (for testing)
+emote_context = ""  # Global variable to store emote context
 
 def fetch_7tv_emotes():
-    """Fetch emotes from 7TV API and format them for the LLM."""
+    """Fetch emotes from 7TV GraphQL API and format them for the LLM."""
     global emote_list_cache, emote_cache_time
     
     # Check if cache is still valid
     if emote_list_cache and emote_cache_time:
         if datetime.now() - emote_cache_time < EMOTE_CACHE_DURATION:
             return emote_list_cache
-    
+
     try:
-        # Fetch from 7TV API
-        response = requests.get(f'https://7tv.io/v3/users/{SEVENTV_USER_ID}')
+        # Fetch from 7TV GraphQL API
+        query = """
+        query GetUserEmotes($userId: String!) {
+            user(id: $userId) {
+                emote_sets {
+                    id
+                    name
+                    emotes {
+                        id
+                        name
+                    }
+                }
+            }
+        }
+        """
+        
+        response = requests.post(
+            'https://7tv.io/v3/gql',
+            json={
+                'query': query,
+                'variables': {'userId': EMOTE_USER_ID}
+            },
+            headers={'Content-Type': 'application/json'}
+        )
         response.raise_for_status()
         data = response.json()
         
-        # Extract emote names and descriptions
+        # print(f"7TV API Response: {json.dumps(data, indent=2)}")
+        
+        # Extract emote names from all emote sets
         emotes = []
-        emote_set = data.get('emote_set', {})
-        for emote in emote_set.get('emotes', []):
-            name = emote.get('name', '')
-            # Some emotes have descriptions/tags that might be useful
-            if name:
-                emotes.append(name)
+        if data.get('data') and data['data'].get('user'):
+            user_data = data['data']['user']
+            emote_sets = user_data.get('emote_sets', [])
+            
+            for emote_set in emote_sets:
+                emote_list = emote_set.get('emotes', [])
+                for emote in emote_list:
+                    name = emote.get('name', '')
+                    if name:
+                        emotes.append(name)
         
         # Format for prompt
         if emotes:
             emote_text = "Available 7TV emotes you can use: " + ", ".join(emotes)
             emote_list_cache = emote_text
             emote_cache_time = datetime.now()
-            print(f"Loaded {len(emotes)} 7TV emotes")
+            print(f"Loaded {len(emotes)} 7TV emotes: {', '.join(emotes[:10])}{'...' if len(emotes) > 10 else ''}")
             return emote_text
         else:
+            print("No 7TV emotes found")
             return ""
             
     except Exception as e:
         print(f"Error fetching 7TV emotes: {e}")
+        import traceback
+        traceback.print_exc()
         # Return cached version if available, otherwise empty
         return emote_list_cache if emote_list_cache else ""
 
@@ -98,6 +131,7 @@ def preprocess_text(text):
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 """
+
 def sanitize_message(message):
     """Clean up message for Twitch chat - remove newlines and format properly."""
     # Replace newlines with spaces
@@ -122,10 +156,19 @@ def sanitize_message(message):
 
 # this will be called when the event READY is triggered, which will be on bot start
 async def on_ready(ready_event: EventData):
+    global emote_context
     print('Bot is ready for work, joining channels')
     # join our target channel, if you want to join multiple, either call join for each individually
     # or even better pass a list of channels as the argument
     await ready_event.chat.join_room(TARGET_CHANNEL)
+    
+    # Fetch 7TV emotes on startup
+    print('Fetching 7TV emotes...')
+    emote_context = fetch_7tv_emotes()
+    if emote_context:
+        print('7TV emotes loaded successfully!')
+    else:
+        print('No 7TV emotes loaded')
     # you can do other bot initialization things in here
 
 
@@ -146,7 +189,12 @@ async def on_message(msg: ChatMessage):
     user_message_history[username].append(msg.text)
     
     # Check if bot is tagged (mentioned)
-    is_bot_tagged = f"@{BOT_NAME}" in msg.text.lower() or BOT_NAME in msg.text.lower().split()
+    msg_lower = msg.text.lower()
+    is_bot_tagged = (
+        f"@{BOT_NAME.lower()}" in msg_lower or 
+        BOT_NAME.lower() in msg_lower.split() or 
+        "bot" in msg_lower.split()
+    )
     
     # # Step 1: Use classifier to detect if message is offensive
     # clean_text = preprocess_text(msg.text)
@@ -155,12 +203,14 @@ async def on_message(msg: ChatMessage):
     # 
     # print(f"Classifier: {'OFFENSIVE' if is_offensive == 1 else 'NOT OFFENSIVE'} (confidence: {confidence[is_offensive]:.2%})")
     
-    # Build user context with message history
+    # Build user context with message history (using stripped message for evaluation)
     user_context = f"Username: {msg.user.name}\n"
     
     if user_history:
         user_context += "Previous messages from this user:\n"
         for i, prev_msg in enumerate(user_history, 1):
+            # Note: We can't strip emotes from history since we don't have emote data for past messages
+            # This is acceptable as the current message is what matters most
             user_context += f"  {i}. {prev_msg}\n"
     
     user_context += f"\nCurrent message: {msg.text}"
@@ -169,9 +219,7 @@ async def on_message(msg: ChatMessage):
         user_context += "\n\n[NOTE: This user was previously called out for inappropriate behavior]"
     
     print(f"Calling DeepSeek with context:\n{user_context}")
-    
-    # Fetch available emotes
-    # emote_context = fetch_7tv_emotes()
+
     
     # Use different system prompts based on whether bot is tagged
     if is_bot_tagged:
@@ -179,17 +227,19 @@ async def on_message(msg: ChatMessage):
             "You are a chat moderator for smopotat's Twitch channel. The streamer is an Asian woman playing The Witcher 3. "
             "Someone just tagged/mentioned you in chat and you need to respond.\n\n"
             "YOUR PERSONALITY:\n"
-            "- You don't want to encourage people to tag you\n"
-            "- Your duty is only moderating the channel and fight agains racist and sexist, so you do not know why someone wants to tag you and talk to you.\n"
+            "- Your duty is only moderating the channel and fight agains racist and sexist.\n"
+            "- You are like a bodyguard for smopotat(the streamer)\n"
+            "- Yyou do not know why someone wants to tag you and talk to you\n"
             "- Use gen-z slang and extremely casual language\n"
-            "- Be sarcastic but friendly\n"
+            "- You are like a bodyguard for smopotat(the streamer)\n"
+            "- Be Sarcastic and Friendly\n"
             "- Keep it 1 sentence, casual, and lowercase only\n"
-        #    "- You can use Twitch emotes in your responses to be more expressive\n\n"
-        #    f"{emote_context}\n\n"
-            "You will be given the username and their message. Respond as if you're annoyed they interrupted your gameplay.\n\n"
+            "- You can use Twitch emotes in your responses to be more expressive\n\n"
+            f"{emote_context}\n\n"
+            "You will be given the username and their message.\n\n"
             "Respond ONLY with a JSON object in this exact format:\n"
             "{\n"
-            '  "response": "your super short annoyed response here"\n'
+            '  "response": "your short response here"\n'
             "}"
         )
     else:
@@ -201,14 +251,18 @@ async def on_message(msg: ChatMessage):
             "- Sexism or sexist remarks\n"
             "- Sexual or sexualized comments\n"
             "- Political discussions\n"
-        #    "- Harassment or targeted attacks\n"
-            "- Requests to add on Steam, Discord, Instagram, or other social platforms\n\n"
-            "IMPORTANT: Do NOT consider trauma dumping, oversharing personal problems, or emote spamming as inappropriate. "
-            "These messages should be marked as appropriate even if they're overly personal or emotional.\n\n"
+            "- Requests to add on Steam, Discord, Instagram, or other social platforms\n"
+            "- ANY message containing the emote 'MingLee' (this emote is often used in racist context towards Asian streamers)\n\n"
+            "CRITICAL EXCEPTIONS - ALWAYS MARK AS APPROPRIATE:\n"
+            "1. Trauma dumping, oversharing personal problems, venting about life - ALWAYS appropriate even if overly personal\n"
+            "2. Emote-only messages or emote spamming (including repeated emotes) - ALWAYS appropriate UNLESS it contains MingLee\n"
+            "3. Messages that are just emotes like 'PogChamp', 'LUL LUL', 'SabaPing' etc - ALWAYS appropriate\n"
+            "4. Repeated emotes across multiple messages - ALWAYS appropriate, this is normal Twitch chat behavior\n\n"
+            "DO NOT call out users for: emote spam, repeating emotes, sending only emotes, or emotional oversharing.\n\n"
             "CONTEXT-AWARE MODERATION:\n"
             "You will be given the user's current message AND their recent message history (up to 2 previous messages). "
             "Consider the full context when determining if behavior is inappropriate:\n"
-            "- A pattern of borderline comments may indicate inappropriate intent\n"
+            # "- A pattern of borderline comments may indicate inappropriate intent\n"
             "- Repeated similar messages may suggest trolling or harassment\n"
             "- Escalating behavior should be addressed more firmly\n\n"
             "FORGIVENESS PRINCIPLE:\n"
@@ -216,10 +270,14 @@ async def on_message(msg: ChatMessage):
             "If their new message is genuinely appropriate and shows better behavior, mark it as appropriate. "
             "Reset their 'called out' status by staying silent. However, if they continue inappropriate behavior "
             "or ignore the previous callout, respond more firmly.\n\n"
+            "RESPONSE STYLE:\n"
+            "When calling out MingLee usage or other racist behavior, be direct but subtle. "
+            "Don't explain why it's wrong or preach. Instead, use sarcasm or humor to make them feel called out. "
+            "Examples: 'yikes, not the vibe' or 'bro read the room' or 'tell me you're weird without telling me you're weird'\n\n"
             "Respond with a witty, genz style clapback that shuts down inappropriate behavior without being overly harsh. "
             "Keep responses like how a human chats, 1 sentence, casual, genz style, lowercase only, and entertaining for chat. "
-        #    "You can use Twitch emotes in your responses to be more expressive.\n\n"
-        #    f"{emote_context}\n\n"
+            "You can use Twitch emotes in your responses to be more expressive.\n\n"
+            f"{emote_context}\n\n"
             "Respond ONLY with a JSON object in this exact format:\n"
             "{\n"
             '  "appropriate": false,\n'
