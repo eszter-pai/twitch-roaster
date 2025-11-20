@@ -2,3 +2,4 @@
 twitch_tokens.json
 data
 offensive_logreg_classifier.joblib
+__pycache__
