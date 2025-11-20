@@ -1,18 +1,17 @@
-import socket
 import re
 import os
 import json
 from pathlib import Path
 from dotenv import load_dotenv
 import requests
+from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
+import torch
 from twitchAPI.twitch import Twitch
 from twitchAPI.oauth import UserAuthenticator, refresh_access_token
 from twitchAPI.type import AuthScope, ChatEvent
 from twitchAPI.chat import Chat, EventData, ChatMessage, ChatSub, ChatCommand
 import asyncio
-import random
 from collections import deque, defaultdict
-import joblib
 from openai import OpenAI
 from datetime import datetime, timedelta
 
@@ -27,6 +26,10 @@ USER_SCOPE = [AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
 TARGET_CHANNEL = os.getenv('TWITCH_CHANNEL')
 EMOTE_USER_ID = os.getenv('SEVENTV_USER_ID')
 TOKEN_FILE = 'twitch_tokens.json'
+
+# Classifier settings
+USE_CLASSIFIER = True
+CLASSIFIER_THRESHOLD = 0.88
 # CLASSIFIER_MODEL = 'offensive_classifier.joblib' # this is the trained logreg model
 
 
@@ -37,6 +40,20 @@ TOKEN_FILE = 'twitch_tokens.json'
 
 # Initialize DeepSeek client
 deepseek_client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+
+# Classifier components (loaded conditionally)
+zero_shot_classifier = None
+toxic_tokenizer = None
+toxic_model = None
+
+# Define offensive categories for zero-shot
+OFFENSIVE_CATEGORIES = [
+    "chat message contains racism",
+    "chat message contains sexism", 
+    "chat message contains political opinion",
+    "chat message contains insult",
+    "chat message contains requests to add on social platforms"
+]
 
 # Message history storage
 general_chat_history = deque(maxlen=10)  # Last 10 messages from all users
@@ -52,6 +69,90 @@ emote_context = ""  # Global variable to store emote context
 # Global emote lists for stripping
 all_emote_names = set()  # Combined set of all emote names for stripping
 emote_names_cache_time = None
+
+def load_classifier_models():
+    """Load the combined classifier models (toxic-bert + zero-shot)."""
+    global zero_shot_classifier, toxic_tokenizer, toxic_model
+    
+    if not USE_CLASSIFIER:
+        print('Classifier disabled (USE_CLASSIFIER=false)')
+        return
+    
+    try:
+        print('Loading zero-shot classifier...')
+        zero_shot_classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+        print('Zero-shot classifier loaded!')
+        
+        print('Loading toxic-bert...')
+        toxic_model_name = "unitary/toxic-bert"
+        toxic_tokenizer = AutoTokenizer.from_pretrained(toxic_model_name)
+        toxic_model = AutoModelForSequenceClassification.from_pretrained(toxic_model_name)
+        toxic_model.eval()
+        print(f'Toxic-bert loaded! (threshold: {CLASSIFIER_THRESHOLD:.0%})')
+    except Exception as e:
+        print(f'Error loading classifier models: {e}')
+        print('Classifier will be disabled for this session.')
+
+def get_toxic_bert_score(text):
+    """Get the maximum toxicity score from toxic-bert."""
+    if toxic_tokenizer is None or toxic_model is None:
+        return 0.0, "model_not_loaded"
+    
+    inputs = toxic_tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
+    with torch.no_grad():
+        outputs = toxic_model(**inputs)
+        logits = outputs.logits
+        probs = torch.softmax(logits, dim=-1).numpy()[0]
+    
+    max_score = max(probs)
+    max_label = toxic_model.config.id2label[probs.argmax()]
+    
+    return max_score, max_label
+
+def get_zero_shot_score(text):
+    """Get the maximum confidence score from zero-shot classifier."""
+    if zero_shot_classifier is None:
+        return 0.0, "model_not_loaded"
+    
+    result = zero_shot_classifier(text, OFFENSIVE_CATEGORIES, multi_label=True)
+    max_score = max(result['scores'])
+    max_label = result['labels'][result['scores'].index(max_score)]
+    
+    return max_score, max_label
+
+def classify_message(text, threshold=None):
+    """Combine both classifiers and use the maximum confidence score."""
+    if threshold is None:
+        threshold = CLASSIFIER_THRESHOLD
+    
+    # Get scores from both models
+    toxic_score, toxic_label = get_toxic_bert_score(text)
+    zero_shot_score, zero_shot_label = get_zero_shot_score(text)
+    
+    # Use the maximum score
+    if toxic_score >= zero_shot_score:
+        max_score = toxic_score
+        max_label = toxic_label
+        model_used = "toxic-bert"
+    else:
+        max_score = zero_shot_score
+        max_label = zero_shot_label
+        model_used = "zero-shot"
+    
+    # Determine if toxic based on threshold
+    is_toxic = max_score >= threshold
+    
+    return {
+        'text': text,
+        'is_toxic': bool(is_toxic),
+        'max_score': float(max_score),
+        'max_label': max_label,
+        'model_used': model_used,
+        'toxic_bert_score': float(toxic_score),
+        'toxic_bert_label': toxic_label,
+        'zero_shot_score': float(zero_shot_score),
+        'zero_shot_label': zero_shot_label
+    }
 
 def fetch_7tv_emotes():
     """Fetch emotes from 7TV GraphQL API and format them for the LLM."""
@@ -391,6 +492,12 @@ async def on_ready(ready_event: EventData):
     print('Fetching all emotes for message stripping...')
     fetch_all_emote_names()
     print('All emote lists loaded!')
+    
+    # Load classifier models if enabled
+    if USE_CLASSIFIER:
+        print('\nInitializing combined classifier...')
+        load_classifier_models()
+        print('Classifier initialization complete!\n')
     # you can do other bot initialization things in here
 
 
@@ -417,12 +524,45 @@ async def on_message(msg: ChatMessage):
     # Add current message to history
     user_message_history[username].append(msg.text)
     
+    # If message is empty after stripping emotes, it's just emotes - always appropriate
+    if not message_without_emotes.strip():
+        print("Message contains only emotes, marking as appropriate.")
+        # Reset call-out status if user was previously called out but is now behaving
+        if was_called_out:
+            user_called_out[username] = False
+            print(f"User {username} has improved behavior, resetting call-out status.")
+        return
+    
     # Check if bot is tagged (mentioned) - use stripped message for analysis
     msg_lower = message_without_emotes.lower()
     is_bot_tagged = (
         f"@{BOT_NAME.lower()}" in msg_lower or 
         BOT_NAME.lower() in msg_lower.split()
     )
+    
+    # Pre-filter with classifier if enabled (skip if bot is tagged)
+    classifier_result = None
+    if USE_CLASSIFIER and not is_bot_tagged:
+        try:
+            classifier_result = classify_message(message_without_emotes)
+            print(f"\nClassifier Analysis:")
+            print(f"  Toxic-BERT:  {classifier_result['toxic_bert_score']:.2%} ({classifier_result['toxic_bert_label']})")
+            print(f"  Zero-Shot:   {classifier_result['zero_shot_score']:.2%} ({classifier_result['zero_shot_label']})")
+            print(f"  → MAX SCORE: {classifier_result['max_score']:.2%} (from {classifier_result['model_used']})")
+            print(f"  → PRE-FILTER: {'🚨 FLAGGED' if classifier_result['is_toxic'] else '✅ PASSED'}")
+            
+            # If classifier says message is OK, skip LLM call entirely
+            if not classifier_result['is_toxic']:
+                print("Classifier determined message is appropriate, skipping LLM call.")
+                # Reset call-out status if user was previously called out but is now behaving
+                if was_called_out:
+                    user_called_out[username] = False
+                    print(f"User {username} has improved behavior, resetting call-out status.")
+                return
+        except Exception as e:
+            print(f"Error running classifier: {e}")
+            # Continue to LLM on classifier error
+            classifier_result = None
     
     # # Step 1: Use classifier to detect if message is offensive
     # clean_text = preprocess_text(msg.text)
@@ -444,6 +584,14 @@ async def on_message(msg: ChatMessage):
     # Use the stripped message (without Twitch emotes) for analysis
     user_context += f"\nCurrent message: {message_without_emotes}"
     
+    # Add classifier results if available
+    if classifier_result:
+        user_context += f"\n\n[CLASSIFIER PRE-FILTER: Message was flagged as potentially toxic]"
+        user_context += f"\n  - Confidence: {classifier_result['max_score']:.0%}"
+        user_context += f"\n  - Category: {classifier_result['max_label']}"
+        user_context += f"\n  - Model: {classifier_result['model_used']}"
+        user_context += "\n\nPlease review this classifier result and make your own judgment. The classifier flagged it, but you should determine if it's truly inappropriate in context."
+    
     if was_called_out:
         user_context += "\n\n[NOTE: This user was previously called out for inappropriate behavior]"
     
@@ -455,8 +603,9 @@ async def on_message(msg: ChatMessage):
 
 
     
-    # Use different system prompts based on whether bot is tagged
+    # Use different system prompts based on whether bot is tagged and classifier status
     if is_bot_tagged:
+        # Bot was tagged - always respond
         SYSTEM_PROMPT = (
             "You are a chat moderator for smopotat's Twitch channel. The streamer is an Asian woman playing The Witcher 3. "
             "Someone just tagged/mentioned you in chat and you need to respond.\n\n"
@@ -475,27 +624,58 @@ async def on_message(msg: ChatMessage):
             '  "response": "your short response here"\n'
             "}"
         )
+    elif USE_CLASSIFIER and classifier_result:
+        # Classifier is enabled and flagged this message - LLM reviews the classifier's decision
+        SYSTEM_PROMPT = (
+            "You are a chat moderator for smopotat's Twitch channel. The streamer is an Asian woman playing The Witcher 3. \n\n"
+            "YOUR ROLE:\n"
+            "An AI classifier has pre-screened this message and flagged it as potentially toxic. "
+            "Your job is to review the classifier's decision and make the final judgment. \n\n"
+            "CLASSIFIER RESULTS:\n"
+            "You will see the classifier's analysis including confidence scores and toxicity categories. "
+            "Use these as guidance, but YOU make the final call.\n\n"
+            "NOT OFFENSIVE (DO NOT CALLOUT):\n"
+            "- Message is actually harmless in context\n"
+            "- Trauma dumping or emotional oversharing - ALWAYS appropriate\n"
+            "- Emote-only messages or emote spam - ALWAYS appropriate\n"
+            "- Talk about Fictional plots or characters - ALWAYS appropriate\n\n"
+            "WHEN TO CONFIRM (mark as inappropriate):\n"
+            "- Racism or racist remarks (especially towards asians)\n"
+            "- Sexism or sexist remarks (especially towards the female streamer)\n"
+            "- Political discussions in real life\n"
+            "- Requests to add on Steam, Discord, Instagram, or other social platforms\n"
+            "CONTEXT-AWARE REVIEW:\n"
+            "Consider the user's message history and whether they were previously called out. "
+            "Give users a chance to improve if they're now behaving appropriately.\n\n"
+            "RESPONSE STYLE (if inappropriate):\n"
+            "Keep it witty, gen-z style, casual, lowercase only, 1 sentence max. "
+            "Use sarcasm or humor - don't preach or explain. "
+            "You can use Twitch emotes in your responses to be more expressive.\n"
+            f"{emote_context}\n\n"
+            "Respond ONLY with a JSON object in this exact format:\n"
+            "{\n"
+            '  "appropriate": true or false,\n'
+            '  "response": "your 1-sentence clapback here (only needed if inappropriate)"\n'
+            "}"
+        )
     else:
+        # Classifier is disabled OR didn't flag message - LLM judges message independently
         SYSTEM_PROMPT = (
             "You are a chat moderator for smopotat's Twitch channel. The streamer is an Asian woman playing The Witcher 3. "
-            "Your job is to respond with witty, clever clapbacks to inappropriate messages and protect her from harmful statements.\n\n"
+            "Your job is to analyze chat messages and respond with witty clapbacks to inappropriate content.\n\n"
             "INAPPROPRIATE content includes:\n"
             "- Racism or racist remarks\n"
             "- Sexism or sexist remarks\n"
             "- Sexual or sexualized comments\n"
             "- Political discussions\n"
             "- Requests to add on Steam, Discord, Instagram, or other social platforms\n"
-            "- ANY message containing the emote 'MingLee' (this emote is often used in racist context towards Asian streamers)\n\n"
-            "CRITICAL EXCEPTIONS - ALWAYS MARK AS APPROPRIATE:\n"
+            "EXCEPTIONS - ALWAYS MARK AS APPROPRIATE:\n"
             "1. Trauma dumping, oversharing personal problems, venting about life - ALWAYS appropriate even if overly personal\n"
-            "2. Emote-only messages or emote spamming (including repeated emotes) - ALWAYS appropriate UNLESS it contains MingLee\n"
             "3. Messages that are just emotes like 'PogChamp', 'LUL LUL', 'SabaPing' etc - ALWAYS appropriate\n"
-            "4. Repeated emotes across multiple messages - ALWAYS appropriate, this is normal Twitch chat behavior\n\n"
             "DO NOT call out users for: emote spam, repeating emotes, sending only emotes, or emotional oversharing.\n\n"
             "CONTEXT-AWARE MODERATION:\n"
             "You will be given the user's current message AND their recent message history (up to 2 previous messages). "
             "Consider the full context when determining if behavior is inappropriate:\n"
-            # "- A pattern of borderline comments may indicate inappropriate intent\n"
             "- Repeated similar messages may suggest trolling or harassment\n"
             "- Escalating behavior should be addressed more firmly\n\n"
             "FORGIVENESS PRINCIPLE:\n"
@@ -504,17 +684,16 @@ async def on_message(msg: ChatMessage):
             "Reset their 'called out' status by staying silent. However, if they continue inappropriate behavior "
             "or ignore the previous callout, respond more firmly.\n\n"
             "RESPONSE STYLE:\n"
-            "When calling out MingLee usage or other racist behavior, be direct but subtle. "
+            "When calling out inappropriate behavior, be subtle but sarcastic. "
             "Don't explain why it's wrong or preach. Instead, use sarcasm or humor to make them feel called out. "
-            "Examples: 'yikes, not the vibe' or 'bro read the room' or 'tell me you're weird without telling me you're weird'\n\n"
             "Respond with a witty, genz style clapback that shuts down inappropriate behavior without being overly harsh. "
             "Keep responses like how a human chats, 1 sentence, casual, genz style, lowercase only, and entertaining for chat. "
-            "You can use Twitch emotes in your responses to be more expressive.\n\n"
+            "You can use Twitch emotes in your responses to be more expressive.\n"
             f"{emote_context}\n\n"
             "Respond ONLY with a JSON object in this exact format:\n"
             "{\n"
-            '  "appropriate": false,\n'
-            '  "response": "your 1-sentence witty, genz style clapback here"\n'
+            '  "appropriate": true or false,\n'
+            '  "response": "your 1-sentence witty, genz style clapback here (only if inappropriate)"\n'
             "}"
         )
     
