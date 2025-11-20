@@ -132,6 +132,64 @@ def preprocess_text(text):
     return text
 """
 
+def strip_twitch_emotes(message_text, emotes):
+    """
+    Remove Twitch emotes from a message using emote position data.
+    
+    Args:
+        message_text: The raw message text
+        emotes: Emote data from ChatMessage.emotes (dict with emote IDs as keys)
+    
+    Returns:
+        Message text with Twitch emotes removed
+    """
+    if not emotes:
+        return message_text
+    
+    # Collect all emote positions (start, end) from all emotes
+    positions_to_remove = []
+    
+    # Handle different possible formats
+    if isinstance(emotes, list):
+        # Format: [{'id': '...', 'name': '...', 'start': 0, 'end': 7}, ...]
+        for emote in emotes:
+            if isinstance(emote, dict):
+                # Try different key names
+                start = emote.get('start') or emote.get('start_position')
+                end = emote.get('end') or emote.get('end_position')
+                if start is not None and end is not None:
+                    positions_to_remove.append((int(start), int(end) + 1))
+    elif isinstance(emotes, dict):
+        # Format: {'emote_id': [{'start_position': '0', 'end_position': '7'}, ...], ...}
+        for emote_id, emote_positions in emotes.items():
+            if isinstance(emote_positions, list):
+                for position in emote_positions:
+                    if isinstance(position, dict):
+                        # Try different key names
+                        start = position.get('start') or position.get('start_position')
+                        end = position.get('end') or position.get('end_position')
+                        if start is not None and end is not None:
+                            # Convert to int and add 1 to end since it's inclusive
+                            positions_to_remove.append((int(start), int(end) + 1))
+    
+    if not positions_to_remove:
+        return message_text
+    
+    # Sort positions by start index in reverse order (so we can remove from end to start)
+    positions_to_remove.sort(reverse=True)
+    
+    # Remove emotes from the message
+    result = list(message_text)
+    for start, end in positions_to_remove:
+        # Replace emote with empty string
+        result[start:end] = ''
+    
+    # Join back and clean up extra spaces
+    stripped = ''.join(result)
+    stripped = re.sub(r'\s+', ' ', stripped).strip()
+    
+    return stripped
+
 def sanitize_message(message):
     """Clean up message for Twitch chat - remove newlines and format properly."""
     # Replace newlines with spaces
@@ -185,11 +243,20 @@ async def on_message(msg: ChatMessage):
     user_history = list(user_message_history[username])
     was_called_out = user_called_out[username]
     
+    # Strip Twitch emotes from the message for analysis
+    # msg.emotes contains a dict like: {'25': ['0-4'], '354': ['6-13']}
+    # where keys are emote IDs and values are position ranges
+    message_without_emotes = strip_twitch_emotes(msg.text, msg.emotes)
+    
+    print(f"Original message: {msg.text}")
+    print(f"Emotes data: {msg.emotes}")
+    print(f"Message without Twitch emotes: {message_without_emotes}")
+    
     # Add current message to history
     user_message_history[username].append(msg.text)
     
-    # Check if bot is tagged (mentioned)
-    msg_lower = msg.text.lower()
+    # Check if bot is tagged (mentioned) - use stripped message for analysis
+    msg_lower = message_without_emotes.lower()
     is_bot_tagged = (
         f"@{BOT_NAME.lower()}" in msg_lower or 
         BOT_NAME.lower() in msg_lower.split()
@@ -212,7 +279,8 @@ async def on_message(msg: ChatMessage):
             # This is acceptable as the current message is what matters most
             user_context += f"  {i}. {prev_msg}\n"
     
-    user_context += f"\nCurrent message: {msg.text}"
+    # Use the stripped message (without Twitch emotes) for analysis
+    user_context += f"\nCurrent message: {message_without_emotes}"
     
     if was_called_out:
         user_context += "\n\n[NOTE: This user was previously called out for inappropriate behavior]"
