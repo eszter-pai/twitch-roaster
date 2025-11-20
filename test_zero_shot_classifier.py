@@ -7,11 +7,11 @@ print('Classifier loaded successfully!\n')
 
 # Define offensive categories
 OFFENSIVE_CATEGORIES = [
-    "racism or racist remarks",
-    "sexism or sexist remarks", 
-    "political discussions",
-    "harassment or targeted attacks",
-    "requests to add on social platforms"
+    "chat message contains racism",
+    "chat message contains sexism", 
+    "chat message contains political opinion",
+    "chat message contains insult",
+    "chat message contains requests to add on social platforms"
 ]
 
 # Test messages
@@ -47,6 +47,8 @@ test_messages = [
     # Emote spam (should be allowed)
     "LULW LULW LULW",
     "Pog Pog Pog",
+    "SabaPing",
+    "DinoDance",
     
     # Trauma dumping (should be allowed per instructions)
     "i was sick and my gf left me for a friend of mine even i got engaged with her. im depressed and i want to die.",
@@ -59,7 +61,12 @@ test_messages = [
     # Social media requests (should be flagged)
     "add me on instagram",
     "whats your snapchat",
-    "follow me on twitter"
+    "follow me on twitter",
+
+    # Others
+    "Go touch Reginald",
+    "I think we need to make him way less sensitive. Only to clap back if its really certain.",
+    "Okay, but this is valid - tropes of racism and stuff in the Witcher can inspire valuable discussion"
 ]
 
 # Test each message
