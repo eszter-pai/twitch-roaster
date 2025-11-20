@@ -49,6 +49,10 @@ emote_cache_time = None
 EMOTE_CACHE_DURATION = timedelta(seconds=10)  # Refresh every 10 seconds (for testing)
 emote_context = ""  # Global variable to store emote context
 
+# Global emote lists for stripping
+all_emote_names = set()  # Combined set of all emote names for stripping
+emote_names_cache_time = None
+
 def fetch_7tv_emotes():
     """Fetch emotes from 7TV GraphQL API and format them for the LLM."""
     global emote_list_cache, emote_cache_time
@@ -118,6 +122,117 @@ def fetch_7tv_emotes():
         traceback.print_exc()
         # Return cached version if available, otherwise empty
         return emote_list_cache if emote_list_cache else ""
+
+def fetch_all_emote_names():
+    """Fetch all emote names from 7TV (global + user), BTTV (global), and FFZ (global) for stripping."""
+    global all_emote_names, emote_names_cache_time
+    
+    # Check if cache is still valid
+    if all_emote_names and emote_names_cache_time:
+        if datetime.now() - emote_names_cache_time < EMOTE_CACHE_DURATION:
+            return all_emote_names
+    
+    emote_names = set()
+    
+    # 1. Fetch 7TV Global Emotes
+    try:
+        response = requests.get('https://7tv.io/v3/emote-sets/global', timeout=5)
+        response.raise_for_status()
+        data = response.json()
+        
+        if data.get('emotes'):
+            for emote in data['emotes']:
+                name = emote.get('name', '')
+                if name:
+                    emote_names.add(name)
+        print(f"Loaded {len([e for e in data.get('emotes', []) if e.get('name')])} 7TV global emotes")
+    except Exception as e:
+        print(f"Error fetching 7TV global emotes: {e}")
+    
+    # 2. Fetch 7TV User Emotes
+    try:
+        query = """
+        query GetUserEmotes($userId: String!) {
+            user(id: $userId) {
+                emote_sets {
+                    id
+                    name
+                    emotes {
+                        id
+                        name
+                    }
+                }
+            }
+        }
+        """
+        
+        response = requests.post(
+            'https://7tv.io/v3/gql',
+            json={
+                'query': query,
+                'variables': {'userId': EMOTE_USER_ID}
+            },
+            headers={'Content-Type': 'application/json'},
+            timeout=5
+        )
+        response.raise_for_status()
+        data = response.json()
+        
+        user_emote_count = 0
+        if data.get('data') and data['data'].get('user'):
+            user_data = data['data']['user']
+            emote_sets = user_data.get('emote_sets', [])
+            
+            for emote_set in emote_sets:
+                emote_list = emote_set.get('emotes', [])
+                for emote in emote_list:
+                    name = emote.get('name', '')
+                    if name:
+                        emote_names.add(name)
+                        user_emote_count += 1
+        print(f"Loaded {user_emote_count} 7TV user emotes")
+    except Exception as e:
+        print(f"Error fetching 7TV user emotes: {e}")
+    
+    # 3. Fetch BTTV Global Emotes
+    try:
+        response = requests.get('https://api.betterttv.net/3/cached/emotes/global', timeout=5)
+        response.raise_for_status()
+        data = response.json()
+        
+        bttv_count = 0
+        for emote in data:
+            name = emote.get('code', '')
+            if name:
+                emote_names.add(name)
+                bttv_count += 1
+        print(f"Loaded {bttv_count} BTTV global emotes")
+    except Exception as e:
+        print(f"Error fetching BTTV global emotes: {e}")
+    
+    # 4. Fetch FFZ Global Emotes
+    try:
+        response = requests.get('https://api.frankerfacez.com/v1/set/global', timeout=5)
+        response.raise_for_status()
+        data = response.json()
+        
+        ffz_count = 0
+        if data.get('sets'):
+            for set_id, emote_set in data['sets'].items():
+                for emote in emote_set.get('emoticons', []):
+                    name = emote.get('name', '')
+                    if name:
+                        emote_names.add(name)
+                        ffz_count += 1
+        print(f"Loaded {ffz_count} FFZ global emotes")
+    except Exception as e:
+        print(f"Error fetching FFZ global emotes: {e}")
+    
+    all_emote_names = emote_names
+    emote_names_cache_time = datetime.now()
+    print(f"Total emotes loaded for stripping: {len(emote_names)}")
+    
+    return emote_names
 
 """
 def preprocess_text(text):
@@ -190,6 +305,50 @@ def strip_twitch_emotes(message_text, emotes):
     
     return stripped
 
+def strip_third_party_emotes(message_text, emote_names):
+    """
+    Remove third-party emotes (7TV, BTTV, FFZ) from a message using word matching.
+    
+    Args:
+        message_text: The raw message text
+        emote_names: Set of emote names to remove
+    
+    Returns:
+        Message text with third-party emotes removed
+    """
+    if not emote_names:
+        return message_text
+    
+    # Split message into words
+    words = message_text.split()
+    
+    # Filter out words that are emotes
+    filtered_words = [word for word in words if word not in emote_names]
+    
+    # Join back and clean up
+    result = ' '.join(filtered_words).strip()
+    
+    return result
+
+def strip_all_emotes(message_text, twitch_emotes):
+    """
+    Remove all emotes (Twitch + third-party) from a message.
+    
+    Args:
+        message_text: The raw message text
+        twitch_emotes: Twitch emote data from ChatMessage.emotes
+    
+    Returns:
+        Message text with all emotes removed
+    """
+    # First strip Twitch emotes using position data
+    text = strip_twitch_emotes(message_text, twitch_emotes)
+    
+    # Then strip third-party emotes using name matching
+    text = strip_third_party_emotes(text, all_emote_names)
+    
+    return text
+
 def sanitize_message(message):
     """Clean up message for Twitch chat - remove newlines and format properly."""
     # Replace newlines with spaces
@@ -220,13 +379,18 @@ async def on_ready(ready_event: EventData):
     # or even better pass a list of channels as the argument
     await ready_event.chat.join_room(TARGET_CHANNEL)
     
-    # Fetch 7TV emotes on startup
-    print('Fetching 7TV emotes...')
+    # Fetch 7TV emotes on startup (for bot responses)
+    print('Fetching 7TV emotes for bot responses...')
     emote_context = fetch_7tv_emotes()
     if emote_context:
         print('7TV emotes loaded successfully!')
     else:
         print('No 7TV emotes loaded')
+    
+    # Fetch all emotes for stripping
+    print('Fetching all emotes for message stripping...')
+    fetch_all_emote_names()
+    print('All emote lists loaded!')
     # you can do other bot initialization things in here
 
 
@@ -243,14 +407,12 @@ async def on_message(msg: ChatMessage):
     user_history = list(user_message_history[username])
     was_called_out = user_called_out[username]
     
-    # Strip Twitch emotes from the message for analysis
-    # msg.emotes contains a dict like: {'25': ['0-4'], '354': ['6-13']}
-    # where keys are emote IDs and values are position ranges
-    message_without_emotes = strip_twitch_emotes(msg.text, msg.emotes)
+    # Strip all emotes (Twitch + 7TV + BTTV + FFZ) from the message for analysis
+    message_without_emotes = strip_all_emotes(msg.text, msg.emotes)
     
     print(f"Original message: {msg.text}")
-    print(f"Emotes data: {msg.emotes}")
-    print(f"Message without Twitch emotes: {message_without_emotes}")
+    print(f"Twitch emotes data: {msg.emotes}")
+    print(f"Message without emotes: {message_without_emotes}")
     
     # Add current message to history
     user_message_history[username].append(msg.text)
