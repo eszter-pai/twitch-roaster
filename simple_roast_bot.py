@@ -27,7 +27,7 @@ USER_SCOPE = [AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
 TARGET_CHANNEL = os.getenv('TWITCH_CHANNEL')
 EMOTE_USER_ID = os.getenv('SEVENTV_USER_ID')
 TOKEN_FILE = 'twitch_tokens.json'
-CLASSIFIER_MODEL = 'offensive_classifier.joblib' # this is the trained logreg model
+# CLASSIFIER_MODEL = 'offensive_classifier.joblib' # this is the trained logreg model
 
 
 # Load the trained classifier
