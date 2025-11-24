@@ -26,7 +26,6 @@ from emote_handler import (
 from classifier import (
     load_classifier_models,
     classify_message,
-    is_classifier_loaded
 )
 
 load_dotenv()
@@ -41,9 +40,16 @@ TARGET_CHANNEL = os.getenv('TWITCH_CHANNEL')
 EMOTE_USER_ID = os.getenv('SEVENTV_USER_ID')
 TOKEN_FILE = 'twitch_tokens.json'
 
+# Toggle: whether the bot should always reply when mentioned/tagged.
+# Set environment variable `RESPOND_WHEN_TAGGED=false` to disable forced replies.
+# RESPOND_WHEN_TAGGED = os.getenv('RESPOND_WHEN_TAGGED', 'true').lower() == 'true'
+RESPOND_WHEN_TAGGED = False
+
 # Classifier settings
-USE_CLASSIFIER = os.getenv('USE_CLASSIFIER', 'true').lower() == 'true'
-CLASSIFIER_THRESHOLD = float(os.getenv('CLASSIFIER_THRESHOLD', '0.88'))
+# USE_CLASSIFIER = os.getenv('USE_CLASSIFIER', 'true').lower() == 'true'
+# CLASSIFIER_THRESHOLD = float(os.getenv('CLASSIFIER_THRESHOLD', '0.88'))
+USE_CLASSIFIER = True
+CLASSIFIER_THRESHOLD = 0.88
 
 # Initialize DeepSeek client
 deepseek_client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
@@ -131,11 +137,22 @@ async def on_message(msg: ChatMessage):
     print(f"Twitch emotes data: {msg.emotes}")
     print(f"Message without emotes: {message_without_emotes}")
     
-    # Add current message to history
-    user_message_history[username].append(msg.text)
+    # Add stripped message to history (only if it has content after stripping emotes)
+    if message_without_emotes.strip():
+        user_message_history[username].append(message_without_emotes)
     
-    # If message is empty after stripping emotes, it's just emotes - always appropriate
-    if not message_without_emotes.strip():
+    # Check if bot is tagged (mentioned) - use stripped message for analysis
+    # Only check for bot tag if message has content after stripping emotes
+    is_bot_tagged = False
+    if message_without_emotes.strip():
+        msg_lower = message_without_emotes.lower()
+        is_bot_tagged = (
+            f"@{BOT_NAME.lower()}" in msg_lower or 
+            BOT_NAME.lower() in msg_lower.split()
+        )
+    
+    # If message is empty after stripping emotes AND bot is not tagged, skip LLM entirely
+    if not message_without_emotes.strip() and not is_bot_tagged:
         print("Message contains only emotes, marking as appropriate.")
         # Reset call-out status if user was previously called out but is now behaving
         if was_called_out:
@@ -143,16 +160,12 @@ async def on_message(msg: ChatMessage):
             print(f"User {username} has improved behavior, resetting call-out status.")
         return
     
-    # Check if bot is tagged (mentioned) - use stripped message for analysis
-    msg_lower = message_without_emotes.lower()
-    is_bot_tagged = (
-        f"@{BOT_NAME.lower()}" in msg_lower or 
-        BOT_NAME.lower() in msg_lower.split()
-    )
-    
-    # Pre-filter with classifier if enabled (skip if bot is tagged)
+    # Pre-filter with classifier if enabled.
+    # If `RESPOND_WHEN_TAGGED` is True, we preserve the old behavior of skipping
+    # the classifier for tagged messages (so tagging forces an LLM review).
+    # If `RESPOND_WHEN_TAGGED` is False, run the classifier even for tagged messages.
     classifier_result = None
-    if USE_CLASSIFIER and not is_bot_tagged:
+    if USE_CLASSIFIER and (not is_bot_tagged or not RESPOND_WHEN_TAGGED):
         try:
             classifier_result = classify_message(message_without_emotes, CLASSIFIER_THRESHOLD)
             print(f"\nClassifier Analysis:")
@@ -199,8 +212,8 @@ async def on_message(msg: ChatMessage):
 
     
     # Use different system prompts based on whether bot is tagged and classifier status
-    if is_bot_tagged:
-        # Bot was tagged - always respond
+    if is_bot_tagged and RESPOND_WHEN_TAGGED:
+        # Bot was tagged and configured to force a reply
         SYSTEM_PROMPT = get_bot_tagged_prompt(emote_context)
     elif USE_CLASSIFIER and classifier_result:
         # Classifier is enabled and flagged this message - LLM reviews the classifier's decision
@@ -228,19 +241,19 @@ async def on_message(msg: ChatMessage):
         # Parse the JSON response
         result = json.loads(llm_response)
         
-        # Reply if bot is tagged OR if message is inappropriate
-        if is_bot_tagged or not result.get("appropriate", True):
+        # Reply if bot is tagged (and toggle allows it) OR if the LLM marked the message as toxic
+        if (is_bot_tagged and RESPOND_WHEN_TAGGED) or result.get("toxic", False):
             clapback = sanitize_message(result.get("response", ""))
             if clapback:
                 await msg.reply(clapback)
-                if is_bot_tagged:
+                if is_bot_tagged and RESPOND_WHEN_TAGGED:
                     print(f"Replied to {username} because bot was tagged.")
                 else:
-                    # Mark user as called out for inappropriate behavior
+                    # Mark user as called out for toxic behavior
                     user_called_out[username] = True
-                    print(f"User {username} has been called out for inappropriate behavior.")
+                    print(f"User {username} has been called out for toxic behavior.")
         else:
-            print("DeepSeek determined message is appropriate, no response needed.")
+            print("DeepSeek determined message is not toxic, no response needed.")
             # If user was previously called out but is now behaving, reset their status
             if was_called_out:
                 user_called_out[username] = False
