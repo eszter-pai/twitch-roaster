@@ -11,6 +11,7 @@ import asyncio
 from collections import deque, defaultdict
 from openai import OpenAI
 from datetime import datetime, timedelta
+import requests
 from prompts import (
     get_bot_tagged_prompt,
     get_classifier_review_prompt,
@@ -31,7 +32,7 @@ from classifier import (
 load_dotenv()
 
 BOT_NAME = os.getenv('TWITCH_BOT_USERNAME')
-MODEL_URL = os.getenv('MODEL_API_URL')  # Ollama URL (kept for fallback)
+MODEL_URL = os.getenv('MODEL_API_URL')  # Ollama URL
 APP_ID  = os.getenv('CLIENT_ID')
 APP_SECRET  = os.getenv('CLIENT_SECRET')
 DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY')
@@ -40,19 +41,27 @@ TARGET_CHANNEL = os.getenv('TWITCH_CHANNEL')
 EMOTE_USER_ID = os.getenv('SEVENTV_USER_ID')
 TOKEN_FILE = 'twitch_tokens.json'
 
+# LLM Provider Configuration
+LLM_PROVIDER = 'deepseek' # 'deepseek' or 'ollama'
+OLLAMA_MODEL = 'gemma3:4b'  # Model to use with Ollama
+
 # Toggle: whether the bot should always reply when mentioned/tagged.
 # Set environment variable `RESPOND_WHEN_TAGGED=false` to disable forced replies.
-# RESPOND_WHEN_TAGGED = os.getenv('RESPOND_WHEN_TAGGED', 'true').lower() == 'true'
 RESPOND_WHEN_TAGGED = False
 
 # Classifier settings
-# USE_CLASSIFIER = os.getenv('USE_CLASSIFIER', 'true').lower() == 'true'
-# CLASSIFIER_THRESHOLD = float(os.getenv('CLASSIFIER_THRESHOLD', '0.88'))
 USE_CLASSIFIER = True
 CLASSIFIER_THRESHOLD = 0.88
 
-# Initialize DeepSeek client
-deepseek_client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+# Initialize LLM client based on provider
+if LLM_PROVIDER == 'deepseek':
+    deepseek_client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+    print(f"Using DeepSeek as LLM provider")
+elif LLM_PROVIDER == 'ollama':
+    deepseek_client = None  # Not used for Ollama
+    print(f"Using Ollama as LLM provider with model: {OLLAMA_MODEL}")
+else:
+    raise ValueError(f"Invalid LLM_PROVIDER: {LLM_PROVIDER}. Must be 'deepseek' or 'ollama'")
 
 # Message history storage
 general_chat_history = deque(maxlen=10)  # Last 10 messages from all users
@@ -223,20 +232,36 @@ async def on_message(msg: ChatMessage):
         SYSTEM_PROMPT = get_independent_judge_prompt(emote_context)
     
     try:
-        # Call DeepSeek API
-        response = deepseek_client.chat.completions.create(
-            model="deepseek-chat",
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_context}
-            ],
-            temperature=1.5,  # higher temperature for more creative responses
-            stream=False,
-            response_format={'type': 'json_object'}
-        )
+        # Call LLM API based on provider
+        if LLM_PROVIDER == 'deepseek':
+            response = deepseek_client.chat.completions.create(
+                model="deepseek-chat",
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": user_context}
+                ],
+                temperature=1.5,
+                stream=False,
+                response_format={'type': 'json_object'}
+            )
+            llm_response = response.choices[0].message.content
+            print(f"DeepSeek Response: {llm_response}")
         
-        llm_response = response.choices[0].message.content
-        print(f"DeepSeek Response: {llm_response}")
+        elif LLM_PROVIDER == 'ollama':
+            payload = {
+                "model": OLLAMA_MODEL,
+                "prompt": user_context,
+                "stream": False,
+                "system": SYSTEM_PROMPT,
+                "format": "json",
+                "options": {
+                    "temperature": 1.5
+                }
+            }
+            response = requests.post(MODEL_URL, json=payload)
+            response.raise_for_status()
+            llm_response = response.json()["response"]
+            print(f"Ollama Response: {llm_response}")
         
         # Parse the JSON response
         result = json.loads(llm_response)
@@ -260,25 +285,7 @@ async def on_message(msg: ChatMessage):
                 print(f"User {username} has improved behavior, resetting call-out status.")
             
     except Exception as e:
-        print(f"Error calling DeepSeek: {e}")
-            # Fallback to Ollama if DeepSeek fails (optional)
-            # You can uncomment this section if you want Ollama as backup
-            # try:
-            #     payload = {
-            #         "model": "gemma3:4b",
-            #         "prompt": user_context,
-            #         "stream": False,
-            #         "system": SYSTEM_PROMPT,
-            #         "format": "json"
-            #     }
-            #     response = requests.post(MODEL_URL, json=payload)
-            #     llm_response = response.json()["response"]
-            #     result = json.loads(llm_response)
-            #     clapback = sanitize_message(result.get("response", ""))
-            #     if clapback:
-            #         await msg.reply(clapback)
-            # except Exception as e2:
-            #     print(f"Ollama fallback also failed: {e2}")
+        print(f"Error calling {LLM_PROVIDER.upper()} LLM: {e}")
 
 
 # this is where we set up the bot
