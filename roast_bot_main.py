@@ -452,7 +452,6 @@ async def run():
     chat = await Chat(twitch)
 
     # register the handlers for the events you want
-
     # listen to when the bot is done starting up and ready to join channels
     chat.register_event(ChatEvent.READY, on_ready)
     # listen to chat messages
@@ -464,7 +463,7 @@ async def run():
     # we are done with our setup, lets start this bot up!
     chat.start()
 
-    # lets run till we press enter in the console
+    # run till we press enter in the console
     try:
         input('press ENTER to stop\\n')
     finally:
