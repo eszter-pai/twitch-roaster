@@ -37,7 +37,8 @@ from user_reputation import (
     init_database,
     get_user_reputation,
     increment_nontoxic_count,
-    record_toxic_behavior
+    record_toxic_behavior,
+    reduce_toxic_count
 )
 
 load_dotenv()
@@ -281,13 +282,7 @@ async def on_message(msg: ChatMessage):
     )
 
     print(f"Calling {LLM_PROVIDER.upper()} with context:\n{user_context}")
-    # tb test: alyreariel: Go touch Reginald 
-    # @alyreariel: Which word triggered him? Touch?
-    # gelleroni: I think we need to make him way less sensitive. Only to clap back if its really certain.
-    # Okay, but this is valid - tropes of racism and stuff in the Witcher can inspire valuable discussion
 
-
-    
     # Use different system prompts based on whether bot is tagged and classifier status
     if is_bot_tagged and RESPOND_WHEN_TAGGED:
         # Bot was tagged and configured to force a reply
@@ -369,6 +364,45 @@ async def on_message(msg: ChatMessage):
         print(f"Error calling {LLM_PROVIDER.upper()} LLM: {e}")
 
 
+# this will be called when someone uses the !detox command
+async def on_detox_command(cmd: ChatCommand):
+    """Handle !detox command to revert false positive detections."""
+    print(f'!detox command from {cmd.user.name}: {cmd.parameter}')
+    
+    # Check if user is moderator or broadcaster
+    is_mod = cmd.user.mod
+    is_broadcaster = cmd.user.name.lower() == TARGET_CHANNEL.lower()
+    
+    if not (is_mod or is_broadcaster):
+        await cmd.reply("only moderators and the streamer can use this command. Clueless")
+        return
+    
+    # Parse username from command parameter
+    if not cmd.parameter:
+        await cmd.reply("usage: !detox [username]")
+        return
+    
+    target_username = cmd.parameter.strip().lstrip('@')
+    
+    try:
+        # Increment nontoxic count (+1)
+        increment_nontoxic_count(target_username)
+        
+        # Reduce toxic count (-1)
+        reduce_toxic_count(target_username, amount=1)
+        
+        # Send apology message
+        await cmd.send(f"@{target_username} i am sorry Sadge you are actually a good bean")
+        print(f"Reputation adjusted for {target_username}: nontoxic +1, toxic -1")
+        
+        # Get updated reputation for logging
+        updated_rep = get_user_reputation(target_username)
+        print(f"Updated reputation: {updated_rep['nontoxic_count']} nontoxic, {updated_rep['toxic_count']} toxic")
+        
+    except Exception as e:
+        print(f"Error processing !detox command: {e}")
+
+
 # this is where we set up the bot
 async def run():
     # set up twitch api instance and add user authentication with some scopes
@@ -423,6 +457,8 @@ async def run():
     chat.register_event(ChatEvent.READY, on_ready)
     # listen to chat messages
     chat.register_event(ChatEvent.MESSAGE, on_message)
+    # listen to !detox command
+    chat.register_command('detox', on_detox_command)
 
 
     # we are done with our setup, lets start this bot up!
