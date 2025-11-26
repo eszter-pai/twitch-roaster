@@ -33,6 +33,12 @@ from rag_knowledge import (
     query_witcher_knowledge,
     format_retrieved_context
 )
+from user_reputation import (
+    init_database,
+    get_user_reputation,
+    increment_nontoxic_count,
+    record_toxic_behavior
+)
 
 load_dotenv()
 
@@ -145,6 +151,15 @@ async def on_ready(ready_event: EventData):
         except Exception as e:
             print(f'Failed to load classifier: {e}')
             print('Continuing without classifier...\n')
+    
+    # Initialize user reputation database
+    print('\nInitializing user reputation database...')
+    try:
+        init_database()
+        print('User reputation database ready!\n')
+    except Exception as e:
+        print(f'Failed to initialize reputation database: {e}')
+        print('Continuing without reputation tracking...\n')
     # you can do other bot initialization things in here
 
 
@@ -160,6 +175,10 @@ async def on_message(msg: ChatMessage):
     username = msg.user.name
     user_history = list(user_message_history[username])
     was_called_out = user_called_out[username]
+    
+    # Load user reputation from database
+    user_reputation = get_user_reputation(username)
+    print(f"User {username} reputation: {user_reputation['nontoxic_count']} nontoxic, {user_reputation['toxic_count']} toxic, {user_reputation['total_messages']} total")
     
     # Strip all emotes (Twitch + 7TV + BTTV + FFZ) from the message for analysis
     message_without_emotes = strip_all_emotes(msg.text, msg.emotes, get_all_emote_names())
@@ -185,6 +204,11 @@ async def on_message(msg: ChatMessage):
     # If message is empty after stripping emotes AND bot is not tagged, skip LLM entirely
     if not message_without_emotes.strip() and not is_bot_tagged:
         print("Message contains only emotes, marking as appropriate.")
+        # Increment nontoxic count for emote-only messages
+        try:
+            increment_nontoxic_count(username)
+        except Exception as e:
+            print(f"Error updating reputation: {e}")
         # Reset call-out status if user was previously called out but is now behaving
         if was_called_out:
             user_called_out[username] = False
@@ -208,6 +232,11 @@ async def on_message(msg: ChatMessage):
             # If classifier says message is OK, skip LLM call entirely
             if not classifier_result['is_toxic']:
                 print("Classifier determined message is appropriate, skipping LLM call.")
+                # Increment nontoxic count for appropriate messages
+                try:
+                    increment_nontoxic_count(username)
+                except Exception as e:
+                    print(f"Error updating reputation: {e}")
                 # Reset call-out status if user was previously called out but is now behaving
                 if was_called_out:
                     user_called_out[username] = False
@@ -239,7 +268,7 @@ async def on_message(msg: ChatMessage):
                 print(f"\nRetrieved Witcher lore context:\n{witcher_context[:200]}...\n")
         except Exception as e:
             print(f"Error querying RAG knowledge base: {e}")
-    
+
     # Build user context with message history (using stripped message for evaluation)
     user_context = build_user_context(
         username=msg.user.name,
@@ -247,9 +276,10 @@ async def on_message(msg: ChatMessage):
         current_message=message_without_emotes,
         classifier_result=classifier_result,
         was_called_out=was_called_out,
-        witcher_context=witcher_context
+        witcher_context=witcher_context,
+        user_reputation=user_reputation
     )
-    
+
     print(f"Calling {LLM_PROVIDER.upper()} with context:\n{user_context}")
     # tb test: alyreariel: Go touch Reginald 
     # @alyreariel: Which word triggered him? Touch?
@@ -315,8 +345,21 @@ async def on_message(msg: ChatMessage):
                     # Mark user as called out for toxic behavior
                     user_called_out[username] = True
                     print(f"User {username} has been called out for toxic behavior.")
+                    # Record toxic behavior in database (reduce nontoxic_count by 20%)
+                    try:
+                        current_nontoxic = user_reputation['nontoxic_count']
+                        reduction_amount = max(1, int(current_nontoxic * 0.20))  # Reduce by 20%, minimum 1
+                        record_toxic_behavior(username, reduction_amount=reduction_amount)
+                        print(f"Recorded toxic behavior: reduced nontoxic_count by {reduction_amount}")
+                    except Exception as e:
+                        print(f"Error recording toxic behavior: {e}")
         else:
             print("DeepSeek determined message is not toxic, no response needed.")
+            # Increment nontoxic count for appropriate messages
+            try:
+                increment_nontoxic_count(username)
+            except Exception as e:
+                print(f"Error updating reputation: {e}")
             # If user was previously called out but is now behaving, reset their status
             if was_called_out:
                 user_called_out[username] = False

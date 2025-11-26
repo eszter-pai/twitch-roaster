@@ -45,7 +45,8 @@ Need smarter chat history handling:
 - [x] Bot should reply when it is tagged, no matter if it is appropriate or not (can be toggled on/off)
 - [ ] Host bot on a server?
 - [x] Replace boolean output (True/False) with confidence score from DeepSeek (clanker shouldnt be offensive) -> Now a classifier(zero-shot + detoxify from transformers) output confidence score before passing to LLM 
-- [ ] Add counter for each user (how many messages the user sent that were appropriate), and use that to adjust the bot's response (e.g., be more lenient with users who have a good track record)
+- [x] Add counter(nontoxic_count) for each user (how many messages the user sent that were appropriate), and use that to adjust the bot's response (e.g., be more lenient with users who have a good track record), we need a persistent layer (database, SQLite) for that
+- [ ] add twitch bot command (!notoxic username) to revert the toxic_count of a user (just -1)
 - [ ] Web UI
 
 ## Setup

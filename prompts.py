@@ -55,6 +55,11 @@ def get_classifier_review_prompt(emote_context: str) -> str:
         "- Requests to contact the streamer off-platform (Steam, Discord, Instagram) when they are used to solicit or harass — THESE SHOULD BE TOXIC.\n"
         "- Insults that are clearly about gaming skill or in-game actions (e.g. 'what a noob', 'get rekt', 'u suck at this game', 'unfollow') — THESE SHOULD BE TOXIC\n"
         "\n"
+        "USER REPUTATION:\n"
+        "You will be provided with the user's reputation data (nontoxic_count, toxic_count, total_messages). \n"
+        "Users with HIGH nontoxic_count (50+) have a track record of appropriate behavior and should be given MORE benefit of the doubt. \n"
+        "For trusted users (nontoxic_count 50+), be MORE LENIENT and lean toward NOT toxic unless the message is clearly and unambiguously harmful. \n"
+        "For new users (nontoxic_count <10) or users with high toxic_count, apply stricter judgment.\n\n"
         "CONTEXT-AWARE REVIEW:\n"
         "Consider the user's message history and whether they were previously called out. "
         "Give users a chance to improve if they're now behaving appropriately.\n\n"
@@ -93,6 +98,11 @@ def get_independent_judge_prompt(emote_context: str) -> str:
         "2. Trauma dumping, oversharing, venting about life - ALWAYS appropriate\n"
         "3. Discussions about Fictional plots (the Witcher) or characters when clearly contextual - ALWAYS appropriate\n"
         "4. If retrieved Witcher lore context is provided showing the message relates to in-game content - ALWAYS appropriate\n\n"
+        "USER REPUTATION:\n"
+        "You will be provided with the user's reputation data (nontoxic_count, toxic_count, total_messages). \n"
+        "Users with HIGH nontoxic_count (50+) have a proven track record of appropriate behavior and should be given MORE benefit of the doubt. \n"
+        "For trusted users (nontoxic_count 50+), be MORE LENIENT and lean toward NOT toxic unless the message is clearly and unambiguously harmful. \n"
+        "For new users (nontoxic_count <10) or users with high toxic_count, apply stricter judgment.\n\n"
         "CONTEXT-AWARE MODERATION:\n"
         "You will be given the user's current message AND their recent message history (up to 2 previous messages). "
         "Consider the full context when determining if behavior is inappropriate:\n"
@@ -120,7 +130,7 @@ def get_independent_judge_prompt(emote_context: str) -> str:
 
 def build_user_context(username: str, user_history: list, current_message: str, 
                        classifier_result: dict = None, was_called_out: bool = False,
-                       witcher_context: str = "") -> str:
+                       witcher_context: str = "", user_reputation: dict = None) -> str:
     """
     Build the user context message for the LLM.
     
@@ -131,11 +141,29 @@ def build_user_context(username: str, user_history: list, current_message: str,
         classifier_result: Optional classifier analysis results
         was_called_out: Whether user was previously called out
         witcher_context: Retrieved Witcher lore context from RAG system
+        user_reputation: Optional user reputation dict with nontoxic_count, toxic_count, total_messages
     
     Returns:
         Formatted user context string
     """
     context = f"Username: {username}\n"
+    
+    # Add user reputation if available
+    if user_reputation:
+        context += f"User Reputation:\n"
+        context += f"  - Nontoxic messages: {user_reputation['nontoxic_count']}\n"
+        context += f"  - Toxic messages: {user_reputation['toxic_count']}\n"
+        context += f"  - Total messages: {user_reputation['total_messages']}\n"
+        
+        # Add reputation tier assessment
+        nontoxic = user_reputation['nontoxic_count']
+        if nontoxic >= 50:
+            context += f"  - Status: TRUSTED USER (give benefit of the doubt)\n"
+        elif nontoxic >= 20:
+            context += f"  - Status: Regular user\n"
+        else:
+            context += f"  - Status: New user\n"
+        context += "\n"
     
     if user_history:
         context += "Previous messages from this user:\n"

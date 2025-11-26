@@ -35,9 +35,8 @@ class OllamaEmbeddingFunction(embedding_functions.EmbeddingFunction):
         """
         self.model_name = embedding_model_name
         self.embeddings_endpoint = ollama_url
-        print(f"Initializing Ollama embedding function with model: {embedding_model_name}")
-        print(f"Ollama API: {ollama_url}")
-    
+        # print(f"Initializing Ollama embedding function with model: {embedding_model_name}")
+
     def __call__(self, input: List[str]) -> List[List[float]]:
         """
         Generate embeddings for a list of texts using Ollama HTTP API.
