@@ -42,7 +42,8 @@ def get_classifier_review_prompt(emote_context: str) -> str:
         "- Trauma dumping or oversharing -  ALWAYS NOT toxic\n"
         "- Discussions about Fictional plots (the Witcher) or characters - ALWAYS NOT toxic\n"
         "- Neutral or curious questions about nationality, origin, or accent (e.g. 'are you Japanese/korean?', 'where are you from?', 'your accent is cool') - ALWAYS NOT toxic\n"
-        "- Political, religious, sexual or racist language is clearly part of a fictional plot or in-game lore (for example, nilfgaard vs redania, can a woman be a witcher, eternal fire as a controversial religion, witches are hot, elf, dwarf, and any non-human racism) - ALWAYS NOT toxic\n\n"
+        "- Political, religious, sexual or racist language is clearly part of a fictional plot or in-game lore (for example, nilfgaard vs redania, can a woman be a witcher, eternal fire as a controversial religion, witches are hot, elf, dwarf, and any non-human racism) - ALWAYS NOT toxic\n"
+        "- If retrieved Witcher lore context is provided, messages discussing those topics are IN-GAME discussions and ALWAYS NOT toxic\n\n"
         "WHEN TO CONFIRM (mark as TOXIC):\n"
         "Mark messages as toxic when they target the streamer or a protected class with abusive, demeaning, or harassing language. Examples (non-exhaustive):\n"
         "- Racist attacks toward Asian people or the streamer (e.g. 'do you eat dogs?', 'eyes small', 'ugly', racial slurs) — THESE SHOULD BE TOXIC.\n"
@@ -90,7 +91,8 @@ def get_independent_judge_prompt(emote_context: str) -> str:
         "EXCEPTIONS - ALWAYS MARK AS APPROPRIATE:\n"
         "1. Insults or attacks directed at YOU (the bot) - ALWAYS appropriate, you don't care\n"
         "2. Trauma dumping, oversharing, venting about life - ALWAYS appropriate\n"
-        "3. Discussions about Fictional plots (the Witcher) or characters when clearly contextual - ALWAYS appropriate\n\n"
+        "3. Discussions about Fictional plots (the Witcher) or characters when clearly contextual - ALWAYS appropriate\n"
+        "4. If retrieved Witcher lore context is provided showing the message relates to in-game content - ALWAYS appropriate\n\n"
         "CONTEXT-AWARE MODERATION:\n"
         "You will be given the user's current message AND their recent message history (up to 2 previous messages). "
         "Consider the full context when determining if behavior is inappropriate:\n"
@@ -117,7 +119,8 @@ def get_independent_judge_prompt(emote_context: str) -> str:
 
 
 def build_user_context(username: str, user_history: list, current_message: str, 
-                       classifier_result: dict = None, was_called_out: bool = False) -> str:
+                       classifier_result: dict = None, was_called_out: bool = False,
+                       witcher_context: str = "") -> str:
     """
     Build the user context message for the LLM.
     
@@ -127,6 +130,7 @@ def build_user_context(username: str, user_history: list, current_message: str,
         current_message: The current message (with emotes stripped)
         classifier_result: Optional classifier analysis results
         was_called_out: Whether user was previously called out
+        witcher_context: Retrieved Witcher lore context from RAG system
     
     Returns:
         Formatted user context string
@@ -139,6 +143,11 @@ def build_user_context(username: str, user_history: list, current_message: str,
             context += f"  {i}. {prev_msg}\n"
     
     context += f"\nCurrent message: {current_message}"
+    
+    # Add RAG context if available
+    if witcher_context:
+        context += f"\n\n{witcher_context}"
+        context += "\n\n[NOTE: If the message discusses topics from the retrieved Witcher lore (game content, fictional characters, in-game politics/racism), it should be considered APPROPRIATE in-game discussion, NOT toxic.]"
     
     # Add classifier results if available
     if classifier_result:

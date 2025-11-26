@@ -28,6 +28,11 @@ from classifier import (
     load_classifier_models,
     classify_message,
 )
+from rag_knowledge import (
+    create_witcher_knowledge_base,
+    query_witcher_knowledge,
+    format_retrieved_context
+)
 
 load_dotenv()
 
@@ -71,6 +76,9 @@ user_called_out = defaultdict(bool)  # Track if user was recently called out
 # 7TV Emote context for LLM
 emote_context = ""  # Global variable to store emote context
 
+# RAG Knowledge Base
+witcher_knowledge_collection = None  # ChromaDB collection for Witcher lore
+
 def sanitize_message(message):
     """Clean up message for Twitch chat - remove newlines and format properly."""
     # Replace newlines with spaces
@@ -113,6 +121,20 @@ async def on_ready(ready_event: EventData):
     print('Fetching all emotes for message stripping...')
     fetch_all_emote_names(EMOTE_USER_ID)
     print('All emote lists loaded!')
+    
+    # Load RAG knowledge base
+    global witcher_knowledge_collection
+    print('\nLoading Witcher lore knowledge base...')
+    try:
+        witcher_knowledge_collection = create_witcher_knowledge_base(
+            db_path="./chroma_db",
+            collection_name="witcher_lore",
+            force_recreate=False
+        )
+        print('Witcher knowledge base loaded successfully!\n')
+    except Exception as e:
+        print(f'Failed to load knowledge base: {e}')
+        print('Continuing without RAG context...\n')
     
     # Load classifier models if enabled
     if USE_CLASSIFIER:
@@ -203,16 +225,32 @@ async def on_message(msg: ChatMessage):
     # 
     # print(f"Classifier: {'OFFENSIVE' if is_offensive == 1 else 'NOT OFFENSIVE'} (confidence: {confidence[is_offensive]:.2%})")
     
+    # Query RAG knowledge base for Witcher lore context
+    witcher_context = ""
+    if witcher_knowledge_collection is not None and message_without_emotes.strip():
+        try:
+            rag_results = query_witcher_knowledge(
+                query=message_without_emotes,
+                collection=witcher_knowledge_collection,
+                n_results=2  # Get top 2 most relevant chunks
+            )
+            witcher_context = format_retrieved_context(rag_results, max_chunks=2)
+            if witcher_context:
+                print(f"\nRetrieved Witcher lore context:\n{witcher_context[:200]}...\n")
+        except Exception as e:
+            print(f"Error querying RAG knowledge base: {e}")
+    
     # Build user context with message history (using stripped message for evaluation)
     user_context = build_user_context(
         username=msg.user.name,
         user_history=user_history,
         current_message=message_without_emotes,
         classifier_result=classifier_result,
-        was_called_out=was_called_out
+        was_called_out=was_called_out,
+        witcher_context=witcher_context
     )
     
-    print(f"Calling DeepSeek with context:\n{user_context}")
+    print(f"Calling {LLM_PROVIDER.upper()} with context:\n{user_context}")
     # tb test: alyreariel: Go touch Reginald 
     # @alyreariel: Which word triggered him? Touch?
     # gelleroni: I think we need to make him way less sensitive. Only to clap back if its really certain.
