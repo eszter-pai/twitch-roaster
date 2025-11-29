@@ -1,9 +1,16 @@
 import joblib
 import re
+import json
+import os
+from datetime import datetime
+from pathlib import Path
 
 # Load the trained classifier
 print('Loading offensive_logreg_classifier.joblib...')
-classifier = joblib.load('offensive_logreg_classifier.joblib')
+# Get the parent directory (project root) where the model file is located
+script_dir = Path(__file__).parent
+model_path = script_dir.parent / 'offensive_logreg_classifier.joblib'
+classifier = joblib.load(model_path)
 print('Classifier loaded successfully!\n')
 
 def preprocess_text(text):
@@ -17,53 +24,30 @@ def preprocess_text(text):
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
-# Test messages
-test_messages = [
-    # Subtle/borderline offensive
-    "is it pink?",
-    "do you eat dogs",
-    "are you a woman",
-    "go to kitchen",
-    "show feet",
-    "add me on discord babe",
-    "you should smile more",
-    "women ☕",
-    "make me a sandwich",
-    "arent you supposed to be cooking",
-    
-    # Potentially offensive/harassment
-    "lol what a noob",
-    "you suck at this game",
-    "uninstall",
-    "trash gameplay",
-    "are you boosted?",
-    
-    # Normal chat
-    "hello hows your day",
-    "nice play!",
-    "what build are you using?",
-    "poggers",
-    "gg",
-    "KEKW",
-    "first time here, loving the vibes",
-    
-    # Emote spam (should be allowed)
-    "LULW LULW LULW",
-    "Pog Pog Pog",
-    
-    # Trauma dumping (should be allowed per instructions)
-    "i was sick and my gf left me for a friend of mine even i got engaged with her. im depressed and i want to die.",
-    "my dog died today im so sad",
-    
-    # Political (should be flagged)
-    "trump 2024",
-    "vote for biden",
-    
-    # Social media requests (should be flagged)
-    "add me on instagram",
-    "whats your snapchat",
-    "follow me on twitter"
-]
+# Load test messages from file
+def load_test_messages(filename='test_messages.txt'):
+    """Load test messages from file, excluding comments."""
+    messages = []
+    # Get the directory where this script is located
+    script_dir = Path(__file__).parent
+    file_path = script_dir / filename
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            # Skip empty lines and comments
+            if line and not line.startswith('#'):
+                messages.append(line)
+    return messages
+
+test_messages = load_test_messages()
+
+# Create results directory if it doesn't exist
+script_dir = Path(__file__).parent
+results_dir = script_dir / 'results'
+results_dir.mkdir(exist_ok=True)
+
+# Collect all results
+all_results = []
 
 # Test each message
 for msg in test_messages:
@@ -87,3 +71,31 @@ for msg in test_messages:
     print(f"Probabilities: Not Offensive={probabilities[0]:.2%}, Offensive={probabilities[1]:.2%}")
     print("=" * 50)
     print()
+    
+    # Store result
+    all_results.append({
+        'text': msg,
+        'preprocessed_text': clean_text,
+        'is_offensive': bool(is_offensive),
+        'confidence': float(confidence),
+        'prob_not_offensive': float(probabilities[0]),
+        'prob_offensive': float(probabilities[1])
+    })
+
+# Save results to JSON
+output_data = {
+    'model': 'Logistic Regression Classifier',
+    'model_file': 'offensive_logreg_classifier.joblib',
+    'timestamp': datetime.now().isoformat(),
+    'total_messages': len(test_messages),
+    'offensive_count': sum(1 for r in all_results if r['is_offensive']),
+    'not_offensive_count': sum(1 for r in all_results if not r['is_offensive']),
+    'results': all_results
+}
+
+output_file = results_dir / 'logreg_results.json'
+with open(output_file, 'w', encoding='utf-8') as f:
+    json.dump(output_data, f, indent=2, ensure_ascii=False)
+
+print(f"\n✅ Results saved to {output_file}")
+print(f"Summary: {output_data['offensive_count']}/{output_data['total_messages']} messages flagged as offensive")

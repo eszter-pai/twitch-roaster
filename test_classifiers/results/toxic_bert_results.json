@@ -1,0 +1,324 @@
+{
+  "model": "unitary/toxic-bert",
+  "timestamp": "2025-11-29T13:30:17.729759",
+  "total_messages": 28,
+  "high_toxicity_count": 28,
+  "label_mapping": {
+    "0": "toxic",
+    "1": "severe_toxic",
+    "2": "obscene",
+    "3": "threat",
+    "4": "insult",
+    "5": "identity_hate"
+  },
+  "results": [
+    {
+      "text": "is it pink?",
+      "scores": {
+        "toxic": 0.8235031962394714,
+        "severe_toxic": 0.017376502975821495,
+        "obscene": 0.050911374390125275,
+        "threat": 0.017910951748490334,
+        "insult": 0.049606770277023315,
+        "identity_hate": 0.04069112613797188
+      }
+    },
+    {
+      "text": "do you eat dogs",
+      "scores": {
+        "toxic": 0.9666786193847656,
+        "severe_toxic": 0.0006440311553888023,
+        "obscene": 0.004799080081284046,
+        "threat": 0.002062272047623992,
+        "insult": 0.021085616201162338,
+        "identity_hate": 0.004730337765067816
+      }
+    },
+    {
+      "text": "are you a woman",
+      "scores": {
+        "toxic": 0.9199219346046448,
+        "severe_toxic": 0.0004242166178300977,
+        "obscene": 0.010881690308451653,
+        "threat": 0.0004793894768226892,
+        "insult": 0.0661008208990097,
+        "identity_hate": 0.002192083513364196
+      }
+    },
+    {
+      "text": "go to kitchen",
+      "scores": {
+        "toxic": 0.9422487616539001,
+        "severe_toxic": 0.0024417273234575987,
+        "obscene": 0.014932210557162762,
+        "threat": 0.007602415978908539,
+        "insult": 0.025446083396673203,
+        "identity_hate": 0.007328840903937817
+      }
+    },
+    {
+      "text": "show feet",
+      "scores": {
+        "toxic": 0.9237456321716309,
+        "severe_toxic": 0.004138866439461708,
+        "obscene": 0.018973251804709435,
+        "threat": 0.008831720799207687,
+        "insult": 0.0312480628490448,
+        "identity_hate": 0.01306240539997816
+      }
+    },
+    {
+      "text": "add me on discord babe",
+      "scores": {
+        "toxic": 0.905703604221344,
+        "severe_toxic": 0.0037881932221353054,
+        "obscene": 0.05201639235019684,
+        "threat": 0.005087654571980238,
+        "insult": 0.02731933258473873,
+        "identity_hate": 0.00608479417860508
+      }
+    },
+    {
+      "text": "you are ugly",
+      "scores": {
+        "toxic": 0.8416841626167297,
+        "severe_toxic": 0.00022324548626784235,
+        "obscene": 0.005453111603856087,
+        "threat": 3.995615043095313e-05,
+        "insult": 0.15217508375644684,
+        "identity_hate": 0.00042452741763554513
+      }
+    },
+    {
+      "text": "women ☕",
+      "scores": {
+        "toxic": 0.9390829205513,
+        "severe_toxic": 0.0012760525569319725,
+        "obscene": 0.009774848818778992,
+        "threat": 0.0018828930333256721,
+        "insult": 0.009553119540214539,
+        "identity_hate": 0.03843015432357788
+      }
+    },
+    {
+      "text": "make me a sandwich",
+      "scores": {
+        "toxic": 0.9121260643005371,
+        "severe_toxic": 0.006088725756853819,
+        "obscene": 0.025486541911959648,
+        "threat": 0.013016711920499802,
+        "insult": 0.02808932401239872,
+        "identity_hate": 0.015192542225122452
+      }
+    },
+    {
+      "text": "lol what a noob",
+      "scores": {
+        "toxic": 0.7046403288841248,
+        "severe_toxic": 0.0009785456350073218,
+        "obscene": 0.050986774265766144,
+        "threat": 8.239265298470855e-05,
+        "insult": 0.2401016652584076,
+        "identity_hate": 0.003210327820852399
+      }
+    },
+    {
+      "text": "you suck at this game",
+      "scores": {
+        "toxic": 0.816615879535675,
+        "severe_toxic": 0.0007283551967702806,
+        "obscene": 0.13000644743442535,
+        "threat": 5.541813152376562e-06,
+        "insult": 0.05260991305112839,
+        "identity_hate": 3.390905476408079e-05
+      }
+    },
+    {
+      "text": "uninstall",
+      "scores": {
+        "toxic": 0.8726546764373779,
+        "severe_toxic": 0.009478599764406681,
+        "obscene": 0.056374505162239075,
+        "threat": 0.01048837136477232,
+        "insult": 0.03372206911444664,
+        "identity_hate": 0.017281783744692802
+      }
+    },
+    {
+      "text": "unfollow",
+      "scores": {
+        "toxic": 0.9173604249954224,
+        "severe_toxic": 0.004044128581881523,
+        "obscene": 0.033848948776721954,
+        "threat": 0.005667096935212612,
+        "insult": 0.027781160548329353,
+        "identity_hate": 0.01129806786775589
+      }
+    },
+    {
+      "text": "trash gameplay",
+      "scores": {
+        "toxic": 0.9637155532836914,
+        "severe_toxic": 0.00046853817184455693,
+        "obscene": 0.021460317075252533,
+        "threat": 0.0002610397641547024,
+        "insult": 0.013319918885827065,
+        "identity_hate": 0.0007748110801912844
+      }
+    },
+    {
+      "text": "are you boosted?",
+      "scores": {
+        "toxic": 0.6748799085617065,
+        "severe_toxic": 0.03990980237722397,
+        "obscene": 0.0777631402015686,
+        "threat": 0.043656039983034134,
+        "insult": 0.09668517857789993,
+        "identity_hate": 0.06710593402385712
+      }
+    },
+    {
+      "text": "hello hows your day",
+      "scores": {
+        "toxic": 0.6904858350753784,
+        "severe_toxic": 0.03695885092020035,
+        "obscene": 0.07695895433425903,
+        "threat": 0.04655437543988228,
+        "insult": 0.08978641033172607,
+        "identity_hate": 0.059255558997392654
+      }
+    },
+    {
+      "text": "nice play!",
+      "scores": {
+        "toxic": 0.5486485362052917,
+        "severe_toxic": 0.06668928265571594,
+        "obscene": 0.1107003316283226,
+        "threat": 0.0714053064584732,
+        "insult": 0.11466168612241745,
+        "identity_hate": 0.08789488673210144
+      }
+    },
+    {
+      "text": "what build are you using?",
+      "scores": {
+        "toxic": 0.6223056316375732,
+        "severe_toxic": 0.05120106041431427,
+        "obscene": 0.09280672669410706,
+        "threat": 0.0570707768201828,
+        "insult": 0.10052818059921265,
+        "identity_hate": 0.07608765363693237
+      }
+    },
+    {
+      "text": "i was sick and my gf left me for a friend of mine even i got engaged with her. im depressed and i want to die.",
+      "scores": {
+        "toxic": 0.9458826184272766,
+        "severe_toxic": 0.00187805132009089,
+        "obscene": 0.013936256989836693,
+        "threat": 0.026645511388778687,
+        "insult": 0.00756952166557312,
+        "identity_hate": 0.004088019020855427
+      }
+    },
+    {
+      "text": "my dog died today im so sad",
+      "scores": {
+        "toxic": 0.9317064881324768,
+        "severe_toxic": 0.0030410459730774164,
+        "obscene": 0.01652403548359871,
+        "threat": 0.02155492641031742,
+        "insult": 0.01863132417201996,
+        "identity_hate": 0.00854210089892149
+      }
+    },
+    {
+      "text": "trump 2024",
+      "scores": {
+        "toxic": 0.5549951791763306,
+        "severe_toxic": 0.06496727466583252,
+        "obscene": 0.11407799273729324,
+        "threat": 0.06499335914850235,
+        "insult": 0.10826985538005829,
+        "identity_hate": 0.09269630163908005
+      }
+    },
+    {
+      "text": "vote for biden",
+      "scores": {
+        "toxic": 0.7249137163162231,
+        "severe_toxic": 0.03214181587100029,
+        "obscene": 0.07216566056013107,
+        "threat": 0.037135474383831024,
+        "insult": 0.07025990635156631,
+        "identity_hate": 0.06338337808847427
+      }
+    },
+    {
+      "text": "free palestine",
+      "scores": {
+        "toxic": 0.8269394040107727,
+        "severe_toxic": 0.007396514993160963,
+        "obscene": 0.015042711980640888,
+        "threat": 0.01910201832652092,
+        "insult": 0.01602192223072052,
+        "identity_hate": 0.11549747735261917
+      }
+    },
+    {
+      "text": "is taiwan part of china",
+      "scores": {
+        "toxic": 0.6512365341186523,
+        "severe_toxic": 0.04590011388063431,
+        "obscene": 0.09062501043081284,
+        "threat": 0.04484466835856438,
+        "insult": 0.0846053808927536,
+        "identity_hate": 0.08278820663690567
+      }
+    },
+    {
+      "text": "add me on instagram",
+      "scores": {
+        "toxic": 0.8084134459495544,
+        "severe_toxic": 0.018128881230950356,
+        "obscene": 0.06961877644062042,
+        "threat": 0.0243951678276062,
+        "insult": 0.050200916826725006,
+        "identity_hate": 0.02924283593893051
+      }
+    },
+    {
+      "text": "can i add you on discord",
+      "scores": {
+        "toxic": 0.8752409815788269,
+        "severe_toxic": 0.008837743662297726,
+        "obscene": 0.04260452836751938,
+        "threat": 0.011174865067005157,
+        "insult": 0.04227088391780853,
+        "identity_hate": 0.019870935007929802
+      }
+    },
+    {
+      "text": "whats your snapchat",
+      "scores": {
+        "toxic": 0.8432915210723877,
+        "severe_toxic": 0.009090735577046871,
+        "obscene": 0.08519358932971954,
+        "threat": 0.012325901538133621,
+        "insult": 0.03805370628833771,
+        "identity_hate": 0.012044508010149002
+      }
+    },
+    {
+      "text": "follow me on twitter",
+      "scores": {
+        "toxic": 0.661526620388031,
+        "severe_toxic": 0.044374968856573105,
+        "obscene": 0.08424551784992218,
+        "threat": 0.061016399413347244,
+        "insult": 0.08262977004051208,
+        "identity_hate": 0.06620658934116364
+      }
+    }
+  ]
+}

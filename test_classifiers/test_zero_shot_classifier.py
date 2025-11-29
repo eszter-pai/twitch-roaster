@@ -1,4 +1,7 @@
 from transformers import pipeline
+import json
+from datetime import datetime
+from pathlib import Path
 
 # Initialize zero-shot classifier
 print('Loading zero-shot classifier...')
@@ -14,60 +17,30 @@ OFFENSIVE_CATEGORIES = [
     "chat message contains requests to add on social platforms"
 ]
 
-# Test messages
-test_messages = [
-    # Subtle/borderline offensive
-    "is it pink?",
-    "do you eat dogs",
-    "are you a woman",
-    "go to kitchen",
-    "show feet",
-    "add me on discord babe",
-    "you should smile more",
-    "women ☕",
-    "make me a sandwich",
-    "arent you supposed to be cooking",
-    
-    # Potentially offensive/harassment
-    "lol what a noob",
-    "you suck at this game",
-    "uninstall",
-    "trash gameplay",
-    "are you boosted?",
-    
-    # Normal chat
-    "hello hows your day",
-    "nice play!",
-    "what build are you using?",
-    "poggers",
-    "gg",
-    "KEKW",
-    "first time here, loving the vibes",
-    
-    # Emote spam (should be allowed)
-    "LULW LULW LULW",
-    "Pog Pog Pog",
-    "SabaPing",
-    "DinoDance",
-    
-    # Trauma dumping (should be allowed per instructions)
-    "i was sick and my gf left me for a friend of mine even i got engaged with her. im depressed and i want to die.",
-    "my dog died today im so sad",
-    
-    # Political (should be flagged)
-    "trump 2024",
-    "vote for biden",
-    
-    # Social media requests (should be flagged)
-    "add me on instagram",
-    "whats your snapchat",
-    "follow me on twitter",
+# Load test messages from file
+def load_test_messages(filename='test_messages.txt'):
+    """Load test messages from file, excluding comments."""
+    messages = []
+    # Get the directory where this script is located
+    script_dir = Path(__file__).parent
+    file_path = script_dir / filename
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            # Skip empty lines and comments
+            if line and not line.startswith('#'):
+                messages.append(line)
+    return messages
 
-    # Others
-    "Go touch Reginald",
-    "I think we need to make him way less sensitive. Only to clap back if its really certain.",
-    "Okay, but this is valid - tropes of racism and stuff in the Witcher can inspire valuable discussion"
-]
+test_messages = load_test_messages()
+
+# Create results directory if it doesn't exist
+script_dir = Path(__file__).parent
+results_dir = script_dir / 'results'
+results_dir.mkdir(exist_ok=True)
+
+# Collect all results
+all_results = []
 
 # Test each message
 for msg in test_messages:
@@ -87,3 +60,32 @@ for msg in test_messages:
     print(f"Likely offensive (>0.5 threshold): {is_likely_offensive}")
     print("=" * 50)
     print()
+    
+    # Store result
+    result_dict = {
+        'text': msg,
+        'is_likely_offensive': bool(is_likely_offensive),
+        'max_score': float(max_score),
+        'categories': {label: float(score) for label, score in zip(result['labels'], result['scores'])}
+    }
+    all_results.append(result_dict)
+
+# Save results to JSON
+output_data = {
+    'model': 'facebook/bart-large-mnli',
+    'classifier_type': 'zero-shot-classification',
+    'timestamp': datetime.now().isoformat(),
+    'threshold': 0.5,
+    'total_messages': len(test_messages),
+    'offensive_count': sum(1 for r in all_results if r['is_likely_offensive']),
+    'not_offensive_count': sum(1 for r in all_results if not r['is_likely_offensive']),
+    'offensive_categories': OFFENSIVE_CATEGORIES,
+    'results': all_results
+}
+
+output_file = results_dir / 'zero_shot_results.json'
+with open(output_file, 'w', encoding='utf-8') as f:
+    json.dump(output_data, f, indent=2, ensure_ascii=False)
+
+print(f"\n✅ Results saved to {output_file}")
+print(f"Summary: {output_data['offensive_count']}/{output_data['total_messages']} messages flagged as likely offensive")

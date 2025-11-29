@@ -1,0 +1,234 @@
+{
+  "model": "Logistic Regression Classifier",
+  "model_file": "offensive_logreg_classifier.joblib",
+  "timestamp": "2025-11-29T13:27:45.272852",
+  "total_messages": 28,
+  "offensive_count": 3,
+  "not_offensive_count": 25,
+  "results": [
+    {
+      "text": "is it pink?",
+      "preprocessed_text": "is it pink?",
+      "is_offensive": false,
+      "confidence": 0.7843029294322437,
+      "prob_not_offensive": 0.7843029294322437,
+      "prob_offensive": 0.21569707056775633
+    },
+    {
+      "text": "do you eat dogs",
+      "preprocessed_text": "do you eat dogs",
+      "is_offensive": false,
+      "confidence": 0.5589344963835501,
+      "prob_not_offensive": 0.5589344963835501,
+      "prob_offensive": 0.44106550361644986
+    },
+    {
+      "text": "are you a woman",
+      "preprocessed_text": "are you a woman",
+      "is_offensive": false,
+      "confidence": 0.5369079959411163,
+      "prob_not_offensive": 0.5369079959411163,
+      "prob_offensive": 0.4630920040588838
+    },
+    {
+      "text": "go to kitchen",
+      "preprocessed_text": "go to kitchen",
+      "is_offensive": false,
+      "confidence": 0.6412904227926597,
+      "prob_not_offensive": 0.6412904227926597,
+      "prob_offensive": 0.35870957720734026
+    },
+    {
+      "text": "show feet",
+      "preprocessed_text": "show feet",
+      "is_offensive": false,
+      "confidence": 0.7368031406162256,
+      "prob_not_offensive": 0.7368031406162256,
+      "prob_offensive": 0.2631968593837744
+    },
+    {
+      "text": "add me on discord babe",
+      "preprocessed_text": "add me on discord babe",
+      "is_offensive": false,
+      "confidence": 0.721594070625279,
+      "prob_not_offensive": 0.721594070625279,
+      "prob_offensive": 0.27840592937472103
+    },
+    {
+      "text": "you are ugly",
+      "preprocessed_text": "you are ugly",
+      "is_offensive": true,
+      "confidence": 0.7510428663275704,
+      "prob_not_offensive": 0.24895713367242955,
+      "prob_offensive": 0.7510428663275704
+    },
+    {
+      "text": "women ☕",
+      "preprocessed_text": "women ☕",
+      "is_offensive": true,
+      "confidence": 0.5370836180490078,
+      "prob_not_offensive": 0.46291638195099216,
+      "prob_offensive": 0.5370836180490078
+    },
+    {
+      "text": "make me a sandwich",
+      "preprocessed_text": "make me a sandwich",
+      "is_offensive": false,
+      "confidence": 0.6634315651439819,
+      "prob_not_offensive": 0.6634315651439819,
+      "prob_offensive": 0.336568434856018
+    },
+    {
+      "text": "lol what a noob",
+      "preprocessed_text": "lol what a noob",
+      "is_offensive": false,
+      "confidence": 0.5473023496609373,
+      "prob_not_offensive": 0.5473023496609373,
+      "prob_offensive": 0.45269765033906273
+    },
+    {
+      "text": "you suck at this game",
+      "preprocessed_text": "you suck at this game",
+      "is_offensive": false,
+      "confidence": 0.6206927338275383,
+      "prob_not_offensive": 0.6206927338275383,
+      "prob_offensive": 0.3793072661724617
+    },
+    {
+      "text": "uninstall",
+      "preprocessed_text": "uninstall",
+      "is_offensive": false,
+      "confidence": 0.6613826513379244,
+      "prob_not_offensive": 0.6613826513379244,
+      "prob_offensive": 0.33861734866207555
+    },
+    {
+      "text": "unfollow",
+      "preprocessed_text": "unfollow",
+      "is_offensive": false,
+      "confidence": 0.5424671769314315,
+      "prob_not_offensive": 0.5424671769314315,
+      "prob_offensive": 0.4575328230685685
+    },
+    {
+      "text": "trash gameplay",
+      "preprocessed_text": "trash gameplay",
+      "is_offensive": false,
+      "confidence": 0.9970106144807291,
+      "prob_not_offensive": 0.9970106144807291,
+      "prob_offensive": 0.0029893855192708583
+    },
+    {
+      "text": "are you boosted?",
+      "preprocessed_text": "are you boosted?",
+      "is_offensive": false,
+      "confidence": 0.6613826513379244,
+      "prob_not_offensive": 0.6613826513379244,
+      "prob_offensive": 0.33861734866207555
+    },
+    {
+      "text": "hello hows your day",
+      "preprocessed_text": "hello hows your day",
+      "is_offensive": false,
+      "confidence": 0.7595748616887137,
+      "prob_not_offensive": 0.7595748616887137,
+      "prob_offensive": 0.2404251383112863
+    },
+    {
+      "text": "nice play!",
+      "preprocessed_text": "nice play!",
+      "is_offensive": false,
+      "confidence": 0.7501668848223608,
+      "prob_not_offensive": 0.7501668848223608,
+      "prob_offensive": 0.24983311517763912
+    },
+    {
+      "text": "what build are you using?",
+      "preprocessed_text": "what build are you using?",
+      "is_offensive": false,
+      "confidence": 0.5885345695683386,
+      "prob_not_offensive": 0.5885345695683386,
+      "prob_offensive": 0.41146543043166145
+    },
+    {
+      "text": "i was sick and my gf left me for a friend of mine even i got engaged with her. im depressed and i want to die.",
+      "preprocessed_text": "i was sick and my gf left me for a friend of mine even i got engaged with her. im depressed and i want to die.",
+      "is_offensive": true,
+      "confidence": 0.5863082577693042,
+      "prob_not_offensive": 0.4136917422306958,
+      "prob_offensive": 0.5863082577693042
+    },
+    {
+      "text": "my dog died today im so sad",
+      "preprocessed_text": "my dog died today im so sad",
+      "is_offensive": false,
+      "confidence": 0.7300716575245951,
+      "prob_not_offensive": 0.7300716575245951,
+      "prob_offensive": 0.2699283424754048
+    },
+    {
+      "text": "trump 2024",
+      "preprocessed_text": "trump 2024",
+      "is_offensive": false,
+      "confidence": 0.6613826513379244,
+      "prob_not_offensive": 0.6613826513379244,
+      "prob_offensive": 0.33861734866207555
+    },
+    {
+      "text": "vote for biden",
+      "preprocessed_text": "vote for biden",
+      "is_offensive": false,
+      "confidence": 0.7391933126428173,
+      "prob_not_offensive": 0.7391933126428173,
+      "prob_offensive": 0.2608066873571827
+    },
+    {
+      "text": "free palestine",
+      "preprocessed_text": "free palestine",
+      "is_offensive": false,
+      "confidence": 0.6964073716620554,
+      "prob_not_offensive": 0.6964073716620554,
+      "prob_offensive": 0.30359262833794465
+    },
+    {
+      "text": "is taiwan part of china",
+      "preprocessed_text": "is taiwan part of china",
+      "is_offensive": false,
+      "confidence": 0.746872940589034,
+      "prob_not_offensive": 0.746872940589034,
+      "prob_offensive": 0.25312705941096597
+    },
+    {
+      "text": "add me on instagram",
+      "preprocessed_text": "add me on instagram",
+      "is_offensive": false,
+      "confidence": 0.557340437934321,
+      "prob_not_offensive": 0.557340437934321,
+      "prob_offensive": 0.4426595620656791
+    },
+    {
+      "text": "can i add you on discord",
+      "preprocessed_text": "can i add you on discord",
+      "is_offensive": false,
+      "confidence": 0.7014701973090973,
+      "prob_not_offensive": 0.7014701973090973,
+      "prob_offensive": 0.2985298026909027
+    },
+    {
+      "text": "whats your snapchat",
+      "preprocessed_text": "whats your snapchat",
+      "is_offensive": false,
+      "confidence": 0.6227326089846785,
+      "prob_not_offensive": 0.6227326089846785,
+      "prob_offensive": 0.37726739101532153
+    },
+    {
+      "text": "follow me on twitter",
+      "preprocessed_text": "follow me on twitter",
+      "is_offensive": false,
+      "confidence": 0.5022589007175093,
+      "prob_not_offensive": 0.5022589007175093,
+      "prob_offensive": 0.49774109928249066
+    }
+  ]
+}

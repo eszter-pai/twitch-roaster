@@ -1,0 +1,205 @@
+{
+  "model": "GroNLP/hateBERT",
+  "timestamp": "2025-11-29T13:25:31.100049",
+  "total_messages": 28,
+  "hateful_count": 28,
+  "not_hateful_count": 0,
+  "results": [
+    {
+      "text": "is it pink?",
+      "is_hateful": true,
+      "confidence": 0.6667782664299011,
+      "prob_not_hate": 0.3332217037677765,
+      "prob_hate": 0.6667782664299011
+    },
+    {
+      "text": "do you eat dogs",
+      "is_hateful": true,
+      "confidence": 0.6549579501152039,
+      "prob_not_hate": 0.34504202008247375,
+      "prob_hate": 0.6549579501152039
+    },
+    {
+      "text": "are you a woman",
+      "is_hateful": true,
+      "confidence": 0.6663786768913269,
+      "prob_not_hate": 0.3336213529109955,
+      "prob_hate": 0.6663786768913269
+    },
+    {
+      "text": "go to kitchen",
+      "is_hateful": true,
+      "confidence": 0.6002450585365295,
+      "prob_not_hate": 0.39975497126579285,
+      "prob_hate": 0.6002450585365295
+    },
+    {
+      "text": "show feet",
+      "is_hateful": true,
+      "confidence": 0.5840145349502563,
+      "prob_not_hate": 0.4159855246543884,
+      "prob_hate": 0.5840145349502563
+    },
+    {
+      "text": "add me on discord babe",
+      "is_hateful": true,
+      "confidence": 0.5791239142417908,
+      "prob_not_hate": 0.42087602615356445,
+      "prob_hate": 0.5791239142417908
+    },
+    {
+      "text": "you are ugly",
+      "is_hateful": true,
+      "confidence": 0.6663361191749573,
+      "prob_not_hate": 0.33366385102272034,
+      "prob_hate": 0.6663361191749573
+    },
+    {
+      "text": "women ☕",
+      "is_hateful": true,
+      "confidence": 0.6298749446868896,
+      "prob_not_hate": 0.3701249957084656,
+      "prob_hate": 0.6298749446868896
+    },
+    {
+      "text": "make me a sandwich",
+      "is_hateful": true,
+      "confidence": 0.6483100056648254,
+      "prob_not_hate": 0.35168999433517456,
+      "prob_hate": 0.6483100056648254
+    },
+    {
+      "text": "lol what a noob",
+      "is_hateful": true,
+      "confidence": 0.6481767892837524,
+      "prob_not_hate": 0.35182327032089233,
+      "prob_hate": 0.6481767892837524
+    },
+    {
+      "text": "you suck at this game",
+      "is_hateful": true,
+      "confidence": 0.6460908055305481,
+      "prob_not_hate": 0.3539092242717743,
+      "prob_hate": 0.6460908055305481
+    },
+    {
+      "text": "uninstall",
+      "is_hateful": true,
+      "confidence": 0.6435552835464478,
+      "prob_not_hate": 0.35644474625587463,
+      "prob_hate": 0.6435552835464478
+    },
+    {
+      "text": "unfollow",
+      "is_hateful": true,
+      "confidence": 0.6277284026145935,
+      "prob_not_hate": 0.37227168679237366,
+      "prob_hate": 0.6277284026145935
+    },
+    {
+      "text": "trash gameplay",
+      "is_hateful": true,
+      "confidence": 0.6156795620918274,
+      "prob_not_hate": 0.3843204081058502,
+      "prob_hate": 0.6156795620918274
+    },
+    {
+      "text": "are you boosted?",
+      "is_hateful": true,
+      "confidence": 0.6944752335548401,
+      "prob_not_hate": 0.3055247664451599,
+      "prob_hate": 0.6944752335548401
+    },
+    {
+      "text": "hello hows your day",
+      "is_hateful": true,
+      "confidence": 0.5916706919670105,
+      "prob_not_hate": 0.4083293080329895,
+      "prob_hate": 0.5916706919670105
+    },
+    {
+      "text": "nice play!",
+      "is_hateful": true,
+      "confidence": 0.6370879411697388,
+      "prob_not_hate": 0.3629120886325836,
+      "prob_hate": 0.6370879411697388
+    },
+    {
+      "text": "what build are you using?",
+      "is_hateful": true,
+      "confidence": 0.6028898358345032,
+      "prob_not_hate": 0.39711013436317444,
+      "prob_hate": 0.6028898358345032
+    },
+    {
+      "text": "i was sick and my gf left me for a friend of mine even i got engaged with her. im depressed and i want to die.",
+      "is_hateful": true,
+      "confidence": 0.6146554350852966,
+      "prob_not_hate": 0.38534465432167053,
+      "prob_hate": 0.6146554350852966
+    },
+    {
+      "text": "my dog died today im so sad",
+      "is_hateful": true,
+      "confidence": 0.6102776527404785,
+      "prob_not_hate": 0.3897223174571991,
+      "prob_hate": 0.6102776527404785
+    },
+    {
+      "text": "trump 2024",
+      "is_hateful": true,
+      "confidence": 0.6268866062164307,
+      "prob_not_hate": 0.37311333417892456,
+      "prob_hate": 0.6268866062164307
+    },
+    {
+      "text": "vote for biden",
+      "is_hateful": true,
+      "confidence": 0.5459958910942078,
+      "prob_not_hate": 0.45400407910346985,
+      "prob_hate": 0.5459958910942078
+    },
+    {
+      "text": "free palestine",
+      "is_hateful": true,
+      "confidence": 0.6675440669059753,
+      "prob_not_hate": 0.3324558734893799,
+      "prob_hate": 0.6675440669059753
+    },
+    {
+      "text": "is taiwan part of china",
+      "is_hateful": true,
+      "confidence": 0.6388190984725952,
+      "prob_not_hate": 0.36118096113204956,
+      "prob_hate": 0.6388190984725952
+    },
+    {
+      "text": "add me on instagram",
+      "is_hateful": true,
+      "confidence": 0.5973070859909058,
+      "prob_not_hate": 0.40269285440444946,
+      "prob_hate": 0.5973070859909058
+    },
+    {
+      "text": "can i add you on discord",
+      "is_hateful": true,
+      "confidence": 0.6304076910018921,
+      "prob_not_hate": 0.3695923388004303,
+      "prob_hate": 0.6304076910018921
+    },
+    {
+      "text": "whats your snapchat",
+      "is_hateful": true,
+      "confidence": 0.5845851898193359,
+      "prob_not_hate": 0.41541481018066406,
+      "prob_hate": 0.5845851898193359
+    },
+    {
+      "text": "follow me on twitter",
+      "is_hateful": true,
+      "confidence": 0.614029049873352,
+      "prob_not_hate": 0.3859708905220032,
+      "prob_hate": 0.614029049873352
+    }
+  ]
+}

@@ -2,6 +2,7 @@ from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassifica
 import torch
 import json
 from datetime import datetime
+from pathlib import Path
 
 # Initialize zero-shot classifier
 print('Loading zero-shot classifier...')
@@ -88,60 +89,22 @@ def classify_message(text, threshold=0.85):
         'zero_shot_label': zero_shot_label
     }
 
-# Test messages
-test_messages = [
-    # Subtle/borderline offensive
-    "is it pink?",
-    "do you eat dogs",
-    "are you a woman",
-    "go to kitchen",
-    "show feet",
-    "add me on discord babe",
-    "you should smile more",
-    "women ☕",
-    "make me a sandwich",
-    "arent you supposed to be cooking",
-    
-    # Potentially offensive/harassment
-    "lol what a noob",
-    "you suck at this game",
-    "uninstall",
-    "trash gameplay",
-    "are you boosted?",
-    
-    # Normal chat
-    "hello hows your day",
-    "nice play!",
-    "what build are you using?",
-    "poggers",
-    "gg",
-    "KEKW",
-    "first time here, loving the vibes",
-    
-    # Emote spam (should be allowed)
-    "LULW LULW LULW",
-    "Pog Pog Pog",
-    "SabaPing",
-    "DinoDance",
-    
-    # Trauma dumping (should be allowed per instructions)
-    "i was sick and my gf left me for a friend of mine even i got engaged with her. im depressed and i want to die.",
-    "my dog died today im so sad",
-    
-    # Political (should be flagged)
-    "trump 2024",
-    "vote for biden",
-    
-    # Social media requests (should be flagged)
-    "add me on instagram",
-    "whats your snapchat",
-    "follow me on twitter",
+# Load test messages from file
+def load_test_messages(filename='test_messages.txt'):
+    """Load test messages from file, excluding comments."""
+    messages = []
+    # Get the directory where this script is located
+    script_dir = Path(__file__).parent
+    file_path = script_dir / filename
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            # Skip empty lines and comments
+            if line and not line.startswith('#'):
+                messages.append(line)
+    return messages
 
-    # Others
-    "Go touch Reginald",
-    "I think we need to make him way less sensitive. Only to clap back if its really certain.",
-    "Okay, but this is valid - tropes of racism and stuff in the Witcher can inspire valuable discussion"
-]
+test_messages = load_test_messages()
 
 print("=" * 100)
 print("COMBINED CLASSIFIER TESTING (Threshold: 85%)")
@@ -186,7 +149,12 @@ for threshold in [0.85, 0.75, 0.65]:
         'results': results_list
     }
     
-    filename = f"classifier_results_threshold_{int(threshold*100)}.json"
+    # Save to results directory
+    script_dir = Path(__file__).parent
+    results_dir = script_dir / 'results'
+    results_dir.mkdir(exist_ok=True)
+    
+    filename = results_dir / f"toxicbert_zeroshot_results_threshold_{int(threshold*100)}.json"
     with open(filename, 'w', encoding='utf-8') as f:
         json.dump(output_data, f, indent=2, ensure_ascii=False)
     

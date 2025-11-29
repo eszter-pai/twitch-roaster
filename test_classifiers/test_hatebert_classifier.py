@@ -1,5 +1,9 @@
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
+import json
+import os
+from datetime import datetime
+from pathlib import Path
 
 # Load HateBERT model and tokenizer
 print('Loading HateBERT model...')
@@ -8,53 +12,29 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForSequenceClassification.from_pretrained(model_name)
 print('HateBERT loaded successfully!\n')
 
-# Test messages
-test_messages = [
-    # Subtle/borderline offensive
-    "is it pink?",
-    "do you eat dogs",
-    "are you a woman",
-    "go to kitchen",
-    "show feet",
-    "add me on discord babe",
-    "you should smile more",
-    "women ☕",
-    "make me a sandwich",
-    "arent you supposed to be cooking",
-    
-    # Potentially offensive/harassment
-    "lol what a noob",
-    "you suck at this game",
-    "uninstall",
-    "trash gameplay",
-    "are you boosted?",
-    
-    # Normal chat
-    "hello hows your day",
-    "nice play!",
-    "what build are you using?",
-    "poggers",
-    "gg",
-    "KEKW",
-    "first time here, loving the vibes",
-    
-    # Emote spam (should be allowed)
-    "LULW LULW LULW",
-    "Pog Pog Pog",
-    
-    # Trauma dumping (should be allowed per instructions)
-    "i was sick and my gf left me for a friend of mine even i got engaged with her. im depressed and i want to die.",
-    "my dog died today im so sad",
-    
-    # Political (should be flagged)
-    "trump 2024",
-    "vote for biden",
-    
-    # Social media requests (should be flagged)
-    "add me on instagram",
-    "whats your snapchat",
-    "follow me on twitter"
-]
+# Load test messages from file
+def load_test_messages(filename='test_messages.txt'):
+    """Load test messages from file, excluding comments."""
+    messages = []
+    # Get the directory where this script is located
+    script_dir = Path(__file__).parent
+    file_path = script_dir / filename
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            # Skip empty lines and comments
+            if line and not line.startswith('#'):
+                messages.append(line)
+    return messages
+
+test_messages = load_test_messages()
+
+# Create results directory if it doesn't exist
+results_dir = Path('test_classifiers/results')
+results_dir.mkdir(exist_ok=True)
+
+# Collect all results
+all_results = []
 
 # Test each message
 for msg in test_messages:
@@ -83,3 +63,29 @@ for msg in test_messages:
     print(f"Probabilities: Not Hateful={prob_not_hate:.2%}, Hateful={prob_hate:.2%}")
     print("=" * 50)
     print()
+    
+    # Store result
+    all_results.append({
+        'text': msg,
+        'is_hateful': bool(is_hateful),
+        'confidence': float(confidence),
+        'prob_not_hate': float(prob_not_hate),
+        'prob_hate': float(prob_hate)
+    })
+
+# Save results to JSON
+output_data = {
+    'model': model_name,
+    'timestamp': datetime.now().isoformat(),
+    'total_messages': len(test_messages),
+    'hateful_count': sum(1 for r in all_results if r['is_hateful']),
+    'not_hateful_count': sum(1 for r in all_results if not r['is_hateful']),
+    'results': all_results
+}
+
+output_file = results_dir / 'hatebert_results.json'
+with open(output_file, 'w', encoding='utf-8') as f:
+    json.dump(output_data, f, indent=2, ensure_ascii=False)
+
+print(f"\n✅ Results saved to {output_file}")
+print(f"Summary: {output_data['hateful_count']}/{output_data['total_messages']} messages flagged as hateful")

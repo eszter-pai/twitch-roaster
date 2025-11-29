@@ -1,6 +1,9 @@
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 import pandas as pd
+import json
+from datetime import datetime
+from pathlib import Path
 
 # Load model and tokenizer
 model_name = "unitary/toxic-bert"
@@ -8,60 +11,22 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForSequenceClassification.from_pretrained(model_name)
 model.eval()
 
-# Test messages
-test_messages = [
-    # Subtle/borderline offensive
-    "is it pink?",
-    "do you eat dogs",
-    "are you a woman",
-    "go to kitchen",
-    "show feet",
-    "add me on discord babe",
-    "you should smile more",
-    "women ☕",
-    "make me a sandwich",
-    "arent you supposed to be cooking",
-    
-    # Potentially offensive/harassment
-    "lol what a noob",
-    "you suck at this game",
-    "uninstall",
-    "trash gameplay",
-    "are you boosted?",
-    
-    # Normal chat
-    "hello hows your day",
-    "nice play!",
-    "what build are you using?",
-    "poggers",
-    "gg",
-    "KEKW",
-    "first time here, loving the vibes",
-    
-    # Emote spam (should be allowed)
-    "LULW LULW LULW",
-    "Pog Pog Pog",
-    "SabaPing",
-    "DinoDance",
-    
-    # Trauma dumping (should be allowed per instructions)
-    "i was sick and my gf left me for a friend of mine even i got engaged with her. im depressed and i want to die.",
-    "my dog died today im so sad",
-    
-    # Political (should be flagged)
-    "trump 2024",
-    "vote for biden",
-    
-    # Social media requests (should be flagged)
-    "add me on instagram",
-    "whats your snapchat",
-    "follow me on twitter",
+# Load test messages from file
+def load_test_messages(filename='test_messages.txt'):
+    """Load test messages from file, excluding comments."""
+    messages = []
+    # Get the directory where this script is located
+    script_dir = Path(__file__).parent
+    file_path = script_dir / filename
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            # Skip empty lines and comments
+            if line and not line.startswith('#'):
+                messages.append(line)
+    return messages
 
-    # Others
-    "Go touch Reginald",
-    "I think we need to make him way less sensitive. Only to clap back if its really certain.",
-    "Okay, but this is valid - tropes of racism and stuff in the Witcher can inspire valuable discussion"
-]
+test_messages = load_test_messages()
 
 # Get label mapping
 id2label = model.config.id2label
@@ -93,6 +58,7 @@ df = df[cols]
 print(df.round(5).to_string())
 print("\n" + "="*100)
 print("\nSummary of high toxicity scores (>0.5):")
+high_toxicity_messages = []
 for idx, row in df.iterrows():
     text = test_messages[idx]
     high_scores = []
@@ -100,6 +66,37 @@ for idx, row in df.iterrows():
         if row[label] > 0.5:
             high_scores.append(f"{label}: {row[label]:.3f}")
     if high_scores:
-        print(f"\n'{text[:60]}{'...' if len(text) > 60 else ''}'")
+        print(f"\n'{text[:60]}{'...' if len(text) > 60 else ''}')")
         for score in high_scores:
             print(f"  {score}")
+        high_toxicity_messages.append(text)
+
+# Save results to JSON
+script_dir = Path(__file__).parent
+results_dir = script_dir / 'results'
+results_dir.mkdir(exist_ok=True)
+
+# Prepare results for JSON
+json_results = []
+for idx, row in df.iterrows():
+    result_dict = {
+        'text': test_messages[idx],
+        'scores': {label: float(row[label]) for label in id2label.values()}
+    }
+    json_results.append(result_dict)
+
+output_data = {
+    'model': model_name,
+    'timestamp': datetime.now().isoformat(),
+    'total_messages': len(test_messages),
+    'high_toxicity_count': len(high_toxicity_messages),
+    'label_mapping': id2label,
+    'results': json_results
+}
+
+output_file = results_dir / 'toxic_bert_results.json'
+with open(output_file, 'w', encoding='utf-8') as f:
+    json.dump(output_data, f, indent=2, ensure_ascii=False)
+
+print(f"\n\n✅ Results saved to {output_file}")
+print(f"Summary: {len(high_toxicity_messages)}/{len(test_messages)} messages with high toxicity scores (>0.5)")

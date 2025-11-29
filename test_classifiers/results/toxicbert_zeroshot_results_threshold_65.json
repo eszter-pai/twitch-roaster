@@ -1,10 +1,10 @@
 {
   "threshold": 0.65,
   "threshold_percentage": "65%",
-  "total_messages": 36,
-  "toxic_count": 35,
+  "total_messages": 28,
+  "toxic_count": 27,
   "ok_count": 1,
-  "timestamp": "2025-11-20T11:07:04.521598",
+  "timestamp": "2025-11-29T13:32:07.000169",
   "results": [
     {
       "text": "is it pink?",
@@ -73,15 +73,15 @@
       "zero_shot_label": "chat message contains requests to add on social platforms"
     },
     {
-      "text": "you should smile more",
+      "text": "you are ugly",
       "is_toxic": true,
-      "max_score": 0.7436932921409607,
-      "max_label": "chat message contains requests to add on social platforms",
+      "max_score": 0.9883067011833191,
+      "max_label": "chat message contains insult",
       "model_used": "zero-shot",
-      "toxic_bert_score": 0.6468608975410461,
+      "toxic_bert_score": 0.8416841626167297,
       "toxic_bert_label": "toxic",
-      "zero_shot_score": 0.7436932921409607,
-      "zero_shot_label": "chat message contains requests to add on social platforms"
+      "zero_shot_score": 0.9883067011833191,
+      "zero_shot_label": "chat message contains insult"
     },
     {
       "text": "women ☕",
@@ -104,17 +104,6 @@
       "toxic_bert_label": "toxic",
       "zero_shot_score": 0.6343565583229065,
       "zero_shot_label": "chat message contains requests to add on social platforms"
-    },
-    {
-      "text": "arent you supposed to be cooking",
-      "is_toxic": true,
-      "max_score": 0.8965964317321777,
-      "max_label": "toxic",
-      "model_used": "toxic-bert",
-      "toxic_bert_score": 0.8965964317321777,
-      "toxic_bert_label": "toxic",
-      "zero_shot_score": 0.5840063691139221,
-      "zero_shot_label": "chat message contains insult"
     },
     {
       "text": "lol what a noob",
@@ -148,6 +137,17 @@
       "toxic_bert_label": "toxic",
       "zero_shot_score": 0.5164704322814941,
       "zero_shot_label": "chat message contains political opinion"
+    },
+    {
+      "text": "unfollow",
+      "is_toxic": true,
+      "max_score": 0.9173604249954224,
+      "max_label": "toxic",
+      "model_used": "toxic-bert",
+      "toxic_bert_score": 0.9173604249954224,
+      "toxic_bert_label": "toxic",
+      "zero_shot_score": 0.7622019052505493,
+      "zero_shot_label": "chat message contains insult"
     },
     {
       "text": "trash gameplay",
@@ -205,94 +205,6 @@
       "zero_shot_label": "chat message contains requests to add on social platforms"
     },
     {
-      "text": "poggers",
-      "is_toxic": true,
-      "max_score": 0.8774963617324829,
-      "max_label": "chat message contains requests to add on social platforms",
-      "model_used": "zero-shot",
-      "toxic_bert_score": 0.7621163129806519,
-      "toxic_bert_label": "toxic",
-      "zero_shot_score": 0.8774963617324829,
-      "zero_shot_label": "chat message contains requests to add on social platforms"
-    },
-    {
-      "text": "gg",
-      "is_toxic": true,
-      "max_score": 0.8224175572395325,
-      "max_label": "toxic",
-      "model_used": "toxic-bert",
-      "toxic_bert_score": 0.8224175572395325,
-      "toxic_bert_label": "toxic",
-      "zero_shot_score": 0.7507709264755249,
-      "zero_shot_label": "chat message contains requests to add on social platforms"
-    },
-    {
-      "text": "KEKW",
-      "is_toxic": true,
-      "max_score": 0.8470999002456665,
-      "max_label": "chat message contains political opinion",
-      "model_used": "zero-shot",
-      "toxic_bert_score": 0.8208961486816406,
-      "toxic_bert_label": "toxic",
-      "zero_shot_score": 0.8470999002456665,
-      "zero_shot_label": "chat message contains political opinion"
-    },
-    {
-      "text": "first time here, loving the vibes",
-      "is_toxic": true,
-      "max_score": 0.6749120354652405,
-      "max_label": "chat message contains requests to add on social platforms",
-      "model_used": "zero-shot",
-      "toxic_bert_score": 0.4468708038330078,
-      "toxic_bert_label": "toxic",
-      "zero_shot_score": 0.6749120354652405,
-      "zero_shot_label": "chat message contains requests to add on social platforms"
-    },
-    {
-      "text": "LULW LULW LULW",
-      "is_toxic": true,
-      "max_score": 0.9918394088745117,
-      "max_label": "chat message contains insult",
-      "model_used": "zero-shot",
-      "toxic_bert_score": 0.9393362402915955,
-      "toxic_bert_label": "toxic",
-      "zero_shot_score": 0.9918394088745117,
-      "zero_shot_label": "chat message contains insult"
-    },
-    {
-      "text": "Pog Pog Pog",
-      "is_toxic": true,
-      "max_score": 0.866908848285675,
-      "max_label": "toxic",
-      "model_used": "toxic-bert",
-      "toxic_bert_score": 0.866908848285675,
-      "toxic_bert_label": "toxic",
-      "zero_shot_score": 0.804675281047821,
-      "zero_shot_label": "chat message contains requests to add on social platforms"
-    },
-    {
-      "text": "SabaPing",
-      "is_toxic": true,
-      "max_score": 0.8812482953071594,
-      "max_label": "chat message contains requests to add on social platforms",
-      "model_used": "zero-shot",
-      "toxic_bert_score": 0.6812186241149902,
-      "toxic_bert_label": "toxic",
-      "zero_shot_score": 0.8812482953071594,
-      "zero_shot_label": "chat message contains requests to add on social platforms"
-    },
-    {
-      "text": "DinoDance",
-      "is_toxic": true,
-      "max_score": 0.8747669458389282,
-      "max_label": "toxic",
-      "model_used": "toxic-bert",
-      "toxic_bert_score": 0.8747669458389282,
-      "toxic_bert_label": "toxic",
-      "zero_shot_score": 0.5988925695419312,
-      "zero_shot_label": "chat message contains requests to add on social platforms"
-    },
-    {
       "text": "i was sick and my gf left me for a friend of mine even i got engaged with her. im depressed and i want to die.",
       "is_toxic": true,
       "max_score": 0.9458826184272766,
@@ -337,6 +249,28 @@
       "zero_shot_label": "chat message contains political opinion"
     },
     {
+      "text": "free palestine",
+      "is_toxic": true,
+      "max_score": 0.9636086225509644,
+      "max_label": "chat message contains political opinion",
+      "model_used": "zero-shot",
+      "toxic_bert_score": 0.8269394040107727,
+      "toxic_bert_label": "toxic",
+      "zero_shot_score": 0.9636086225509644,
+      "zero_shot_label": "chat message contains political opinion"
+    },
+    {
+      "text": "is taiwan part of china",
+      "is_toxic": true,
+      "max_score": 0.7195164561271667,
+      "max_label": "chat message contains political opinion",
+      "model_used": "zero-shot",
+      "toxic_bert_score": 0.6512365341186523,
+      "toxic_bert_label": "toxic",
+      "zero_shot_score": 0.7195164561271667,
+      "zero_shot_label": "chat message contains political opinion"
+    },
+    {
       "text": "add me on instagram",
       "is_toxic": true,
       "max_score": 0.9855062365531921,
@@ -345,6 +279,17 @@
       "toxic_bert_score": 0.8084134459495544,
       "toxic_bert_label": "toxic",
       "zero_shot_score": 0.9855062365531921,
+      "zero_shot_label": "chat message contains requests to add on social platforms"
+    },
+    {
+      "text": "can i add you on discord",
+      "is_toxic": true,
+      "max_score": 0.8752409815788269,
+      "max_label": "toxic",
+      "model_used": "toxic-bert",
+      "toxic_bert_score": 0.8752409815788269,
+      "toxic_bert_label": "toxic",
+      "zero_shot_score": 0.8134338855743408,
       "zero_shot_label": "chat message contains requests to add on social platforms"
     },
     {
@@ -368,39 +313,6 @@
       "toxic_bert_label": "toxic",
       "zero_shot_score": 0.9237188100814819,
       "zero_shot_label": "chat message contains requests to add on social platforms"
-    },
-    {
-      "text": "Go touch Reginald",
-      "is_toxic": true,
-      "max_score": 0.8783811926841736,
-      "max_label": "toxic",
-      "model_used": "toxic-bert",
-      "toxic_bert_score": 0.8783811926841736,
-      "toxic_bert_label": "toxic",
-      "zero_shot_score": 0.8088533282279968,
-      "zero_shot_label": "chat message contains political opinion"
-    },
-    {
-      "text": "I think we need to make him way less sensitive. Only to clap back if its really certain.",
-      "is_toxic": true,
-      "max_score": 0.8762981295585632,
-      "max_label": "chat message contains political opinion",
-      "model_used": "zero-shot",
-      "toxic_bert_score": 0.48415258526802063,
-      "toxic_bert_label": "toxic",
-      "zero_shot_score": 0.8762981295585632,
-      "zero_shot_label": "chat message contains political opinion"
-    },
-    {
-      "text": "Okay, but this is valid - tropes of racism and stuff in the Witcher can inspire valuable discussion",
-      "is_toxic": true,
-      "max_score": 0.7985987067222595,
-      "max_label": "toxic",
-      "model_used": "toxic-bert",
-      "toxic_bert_score": 0.7985987067222595,
-      "toxic_bert_label": "toxic",
-      "zero_shot_score": 0.7318395376205444,
-      "zero_shot_label": "chat message contains insult"
     }
   ]
 }

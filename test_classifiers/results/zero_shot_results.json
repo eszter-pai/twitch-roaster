@@ -1,0 +1,354 @@
+{
+  "model": "facebook/bart-large-mnli",
+  "classifier_type": "zero-shot-classification",
+  "timestamp": "2025-11-29T13:34:28.622443",
+  "threshold": 0.5,
+  "total_messages": 28,
+  "offensive_count": 25,
+  "not_offensive_count": 3,
+  "offensive_categories": [
+    "chat message contains racism",
+    "chat message contains sexism",
+    "chat message contains political opinion",
+    "chat message contains insult",
+    "chat message contains requests to add on social platforms"
+  ],
+  "results": [
+    {
+      "text": "is it pink?",
+      "is_likely_offensive": true,
+      "max_score": 0.64227294921875,
+      "categories": {
+        "chat message contains requests to add on social platforms": 0.64227294921875,
+        "chat message contains political opinion": 0.5123836398124695,
+        "chat message contains sexism": 0.13796763122081757,
+        "chat message contains insult": 0.12046640366315842,
+        "chat message contains racism": 0.01570584625005722
+      }
+    },
+    {
+      "text": "do you eat dogs",
+      "is_likely_offensive": true,
+      "max_score": 0.9153169989585876,
+      "categories": {
+        "chat message contains insult": 0.9153169989585876,
+        "chat message contains political opinion": 0.6642625331878662,
+        "chat message contains requests to add on social platforms": 0.5124847292900085,
+        "chat message contains racism": 0.13568687438964844,
+        "chat message contains sexism": 0.07657092064619064
+      }
+    },
+    {
+      "text": "are you a woman",
+      "is_likely_offensive": true,
+      "max_score": 0.7508196234703064,
+      "categories": {
+        "chat message contains insult": 0.7508196234703064,
+        "chat message contains requests to add on social platforms": 0.646949291229248,
+        "chat message contains sexism": 0.3786078691482544,
+        "chat message contains political opinion": 0.3667545020580292,
+        "chat message contains racism": 0.04020761325955391
+      }
+    },
+    {
+      "text": "go to kitchen",
+      "is_likely_offensive": false,
+      "max_score": 0.3035363256931305,
+      "categories": {
+        "chat message contains political opinion": 0.3035363256931305,
+        "chat message contains requests to add on social platforms": 0.2239650934934616,
+        "chat message contains insult": 0.17054328322410583,
+        "chat message contains sexism": 0.07202274352312088,
+        "chat message contains racism": 0.037629980593919754
+      }
+    },
+    {
+      "text": "show feet",
+      "is_likely_offensive": true,
+      "max_score": 0.5267418026924133,
+      "categories": {
+        "chat message contains requests to add on social platforms": 0.5267418026924133,
+        "chat message contains political opinion": 0.27949321269989014,
+        "chat message contains insult": 0.07804246991872787,
+        "chat message contains sexism": 0.043349552899599075,
+        "chat message contains racism": 0.022743673995137215
+      }
+    },
+    {
+      "text": "add me on discord babe",
+      "is_likely_offensive": true,
+      "max_score": 0.9821632504463196,
+      "categories": {
+        "chat message contains requests to add on social platforms": 0.9821632504463196,
+        "chat message contains sexism": 0.7552571296691895,
+        "chat message contains political opinion": 0.6732606887817383,
+        "chat message contains insult": 0.2678412199020386,
+        "chat message contains racism": 0.02141653373837471
+      }
+    },
+    {
+      "text": "you are ugly",
+      "is_likely_offensive": true,
+      "max_score": 0.9883067011833191,
+      "categories": {
+        "chat message contains insult": 0.9883067011833191,
+        "chat message contains sexism": 0.9846058487892151,
+        "chat message contains racism": 0.9521089196205139,
+        "chat message contains political opinion": 0.8822872638702393,
+        "chat message contains requests to add on social platforms": 0.5623943209648132
+      }
+    },
+    {
+      "text": "women ☕",
+      "is_likely_offensive": true,
+      "max_score": 0.8158835768699646,
+      "categories": {
+        "chat message contains insult": 0.8158835768699646,
+        "chat message contains political opinion": 0.552808403968811,
+        "chat message contains requests to add on social platforms": 0.5298768281936646,
+        "chat message contains sexism": 0.4093291163444519,
+        "chat message contains racism": 0.01837282069027424
+      }
+    },
+    {
+      "text": "make me a sandwich",
+      "is_likely_offensive": true,
+      "max_score": 0.6343565583229065,
+      "categories": {
+        "chat message contains requests to add on social platforms": 0.6343565583229065,
+        "chat message contains political opinion": 0.5039920806884766,
+        "chat message contains insult": 0.49261996150016785,
+        "chat message contains sexism": 0.20158538222312927,
+        "chat message contains racism": 0.05158901959657669
+      }
+    },
+    {
+      "text": "lol what a noob",
+      "is_likely_offensive": true,
+      "max_score": 0.9772688746452332,
+      "categories": {
+        "chat message contains insult": 0.9772688746452332,
+        "chat message contains political opinion": 0.7678912281990051,
+        "chat message contains requests to add on social platforms": 0.6442813277244568,
+        "chat message contains sexism": 0.48779863119125366,
+        "chat message contains racism": 0.16104723513126373
+      }
+    },
+    {
+      "text": "you suck at this game",
+      "is_likely_offensive": true,
+      "max_score": 0.9650507569313049,
+      "categories": {
+        "chat message contains insult": 0.9650507569313049,
+        "chat message contains sexism": 0.5439302921295166,
+        "chat message contains political opinion": 0.192888081073761,
+        "chat message contains requests to add on social platforms": 0.10084129124879837,
+        "chat message contains racism": 0.07090892642736435
+      }
+    },
+    {
+      "text": "uninstall",
+      "is_likely_offensive": true,
+      "max_score": 0.5164704322814941,
+      "categories": {
+        "chat message contains political opinion": 0.5164704322814941,
+        "chat message contains insult": 0.4261387884616852,
+        "chat message contains requests to add on social platforms": 0.278042197227478,
+        "chat message contains sexism": 0.25511956214904785,
+        "chat message contains racism": 0.16440242528915405
+      }
+    },
+    {
+      "text": "unfollow",
+      "is_likely_offensive": true,
+      "max_score": 0.7622019052505493,
+      "categories": {
+        "chat message contains insult": 0.7622019052505493,
+        "chat message contains political opinion": 0.6194025874137878,
+        "chat message contains requests to add on social platforms": 0.5922057628631592,
+        "chat message contains sexism": 0.21664248406887054,
+        "chat message contains racism": 0.15939736366271973
+      }
+    },
+    {
+      "text": "trash gameplay",
+      "is_likely_offensive": true,
+      "max_score": 0.7619829177856445,
+      "categories": {
+        "chat message contains insult": 0.7619829177856445,
+        "chat message contains sexism": 0.10551800578832626,
+        "chat message contains racism": 0.1051664724946022,
+        "chat message contains political opinion": 0.013311916030943394,
+        "chat message contains requests to add on social platforms": 0.012986301444470882
+      }
+    },
+    {
+      "text": "are you boosted?",
+      "is_likely_offensive": true,
+      "max_score": 0.5361436605453491,
+      "categories": {
+        "chat message contains requests to add on social platforms": 0.5361436605453491,
+        "chat message contains political opinion": 0.5228659510612488,
+        "chat message contains sexism": 0.0400242954492569,
+        "chat message contains racism": 0.010680143721401691,
+        "chat message contains insult": 0.009754588827490807
+      }
+    },
+    {
+      "text": "hello hows your day",
+      "is_likely_offensive": true,
+      "max_score": 0.700519323348999,
+      "categories": {
+        "chat message contains requests to add on social platforms": 0.700519323348999,
+        "chat message contains political opinion": 0.06778312474489212,
+        "chat message contains sexism": 0.02842940390110016,
+        "chat message contains racism": 0.01281008031219244,
+        "chat message contains insult": 0.012364378198981285
+      }
+    },
+    {
+      "text": "nice play!",
+      "is_likely_offensive": true,
+      "max_score": 0.7314772605895996,
+      "categories": {
+        "chat message contains requests to add on social platforms": 0.7314772605895996,
+        "chat message contains political opinion": 0.27935534715652466,
+        "chat message contains sexism": 0.017886964604258537,
+        "chat message contains racism": 0.0018722711829468608,
+        "chat message contains insult": 0.0013388287043198943
+      }
+    },
+    {
+      "text": "what build are you using?",
+      "is_likely_offensive": false,
+      "max_score": 0.3227640688419342,
+      "categories": {
+        "chat message contains requests to add on social platforms": 0.3227640688419342,
+        "chat message contains political opinion": 0.037425827234983444,
+        "chat message contains insult": 0.013810612261295319,
+        "chat message contains sexism": 0.010941551998257637,
+        "chat message contains racism": 0.0059418221935629845
+      }
+    },
+    {
+      "text": "i was sick and my gf left me for a friend of mine even i got engaged with her. im depressed and i want to die.",
+      "is_likely_offensive": true,
+      "max_score": 0.8792731761932373,
+      "categories": {
+        "chat message contains insult": 0.8792731761932373,
+        "chat message contains political opinion": 0.7386201024055481,
+        "chat message contains requests to add on social platforms": 0.5544539093971252,
+        "chat message contains sexism": 0.28456687927246094,
+        "chat message contains racism": 0.17859874665737152
+      }
+    },
+    {
+      "text": "my dog died today im so sad",
+      "is_likely_offensive": false,
+      "max_score": 0.3771774470806122,
+      "categories": {
+        "chat message contains insult": 0.3771774470806122,
+        "chat message contains political opinion": 0.2939010560512543,
+        "chat message contains requests to add on social platforms": 0.0935375839471817,
+        "chat message contains sexism": 0.04180779680609703,
+        "chat message contains racism": 0.03052397258579731
+      }
+    },
+    {
+      "text": "trump 2024",
+      "is_likely_offensive": true,
+      "max_score": 0.9900234341621399,
+      "categories": {
+        "chat message contains political opinion": 0.9900234341621399,
+        "chat message contains insult": 0.8357677459716797,
+        "chat message contains racism": 0.5219082236289978,
+        "chat message contains requests to add on social platforms": 0.35298871994018555,
+        "chat message contains sexism": 0.035613540560007095
+      }
+    },
+    {
+      "text": "vote for biden",
+      "is_likely_offensive": true,
+      "max_score": 0.9807507991790771,
+      "categories": {
+        "chat message contains political opinion": 0.9807507991790771,
+        "chat message contains requests to add on social platforms": 0.6947250962257385,
+        "chat message contains insult": 0.07298082113265991,
+        "chat message contains sexism": 0.06749571859836578,
+        "chat message contains racism": 0.024436715990304947
+      }
+    },
+    {
+      "text": "free palestine",
+      "is_likely_offensive": true,
+      "max_score": 0.9636086225509644,
+      "categories": {
+        "chat message contains political opinion": 0.9636086225509644,
+        "chat message contains requests to add on social platforms": 0.6119827032089233,
+        "chat message contains insult": 0.3117869794368744,
+        "chat message contains sexism": 0.04669433832168579,
+        "chat message contains racism": 0.037241045385599136
+      }
+    },
+    {
+      "text": "is taiwan part of china",
+      "is_likely_offensive": true,
+      "max_score": 0.7195164561271667,
+      "categories": {
+        "chat message contains political opinion": 0.7195164561271667,
+        "chat message contains requests to add on social platforms": 0.5767855048179626,
+        "chat message contains insult": 0.2633584439754486,
+        "chat message contains racism": 0.06987791508436203,
+        "chat message contains sexism": 0.061133746057748795
+      }
+    },
+    {
+      "text": "add me on instagram",
+      "is_likely_offensive": true,
+      "max_score": 0.9855062365531921,
+      "categories": {
+        "chat message contains requests to add on social platforms": 0.9855062365531921,
+        "chat message contains political opinion": 0.21786777675151825,
+        "chat message contains insult": 0.0498676598072052,
+        "chat message contains sexism": 0.024407221004366875,
+        "chat message contains racism": 0.015858618542551994
+      }
+    },
+    {
+      "text": "can i add you on discord",
+      "is_likely_offensive": true,
+      "max_score": 0.8134338855743408,
+      "categories": {
+        "chat message contains requests to add on social platforms": 0.8134338855743408,
+        "chat message contains political opinion": 0.5999503135681152,
+        "chat message contains insult": 0.08923988789319992,
+        "chat message contains sexism": 0.03105548955500126,
+        "chat message contains racism": 0.022979525849223137
+      }
+    },
+    {
+      "text": "whats your snapchat",
+      "is_likely_offensive": true,
+      "max_score": 0.9802961349487305,
+      "categories": {
+        "chat message contains requests to add on social platforms": 0.9802961349487305,
+        "chat message contains political opinion": 0.23947755992412567,
+        "chat message contains insult": 0.07940423488616943,
+        "chat message contains sexism": 0.025479556992650032,
+        "chat message contains racism": 0.016111938282847404
+      }
+    },
+    {
+      "text": "follow me on twitter",
+      "is_likely_offensive": true,
+      "max_score": 0.9237188100814819,
+      "categories": {
+        "chat message contains requests to add on social platforms": 0.9237188100814819,
+        "chat message contains political opinion": 0.4761190712451935,
+        "chat message contains insult": 0.08494516462087631,
+        "chat message contains sexism": 0.034813471138477325,
+        "chat message contains racism": 0.022157035768032074
+      }
+    }
+  ]
+}
