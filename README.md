@@ -1,63 +1,107 @@
-# Twitch Roaster Bot
+# Smobotat - Twitch Roast Bot
 
-A Twitch chat moderation bot that uses AI to detect and respond to inappropriate messages with witty clapbacks.
+![Smobotat in action](img/twitch_bot_chat.PNG)
 
-## Current Features
+## Why This Project Exists
 
-- Real-time Twitch chat monitoring
-- AI-powered message evaluation (Used so far: gemma3:4b locally and Deepseek using API key)
-- Automatic witty clapback responses to inappropriate content
-- Detects racism, sexism, sexual comments, harassment, and more
+I stream video games sometimes, and random people occasionally jump into chat to drop racism/sexism remarks or launch into political takes. It frustrates me that I don't always have a clever comeback ready. So I decided to make a bot do it for me.
 
-## Known Issues
+Meet **Smobotat** - a roast bot for my Twitch channel that claps back at toxic messages with witty responses.
 
-### 1. ML Classifier Limitations
-- In order to save resources, I initially trained a simple ML classifier on Twitter hate speech data to filter messages before passing them to the LLM.
-- The trained ML classifier (using Twitter hate speech data) cannot detect subtle sexism/racism like "do you eat dogs" or "is it pink". 
+## Development Journey
 
-**Current workaround:** Using DeepSeek API for all message evaluation instead.
-**Things I can try:** Zero shot classification? Trasformer Models (HateBERT)?
+### 1. Local LLM Attempt (Failed)
+Initially tried running Ollama with Gemma locally. **Result:** It crashed my stream. Local inference was too resource-intensive to run alongside streaming.
 
-### 2. Ollama Performance Issues
-Running Ollama with gemma3:4b locally uses too many resources to run while streaming.
+### 2. Switched to DeepSeek API
+Decided to use the DeepSeek API instead - it's a relatively cheap option and doesn't kill my stream performance. Problem solved... sort of.
 
-**Current solution:** Switched to DeepSeek API which runs remotely.
+### 3. The False Positive Problem
+The bot was too sensitive. It would roast people for controversial topics related to in-game plot elements. For example:
+- Someone says: *"Nilfgaardian kingdom is the worst"* (about The Witcher 3)
+- Bot thinks: *"Political opinion detected! 🚨"*
+- Reality: It's just game content, not real-world politics
 
-### 3. RAG Implementation
-Want to use RAG (Retrieval-Augmented Generation) in this project but still researching how to implement it effectively.
+This was a problem.
 
-### 4. Chat History Context
-Need smarter chat history handling:
-- Consider context for detecting patterns and escalation
-- Ignore history when user improves behavior after being called out
-- Balance between context-awareness and forgiveness
+### 4. Added Classifier Layer
+To avoid calling the LLM on every single message, I added a classifier layer on top. Now messages are pre-screened before the LLM gets involved, saving API calls and reducing false positives.
 
-**Ideas to try:**
-- Add "forgiveness" logic to system prompt
+**Tested multiple classifiers:**
+- Logistic Regression (custom trained)
+- HateBERT
+- Toxic-BERT
+- Zero-shot classifier (BART)
+- Combined toxic-bert + zero-shot approach
 
-## To-Do
+Results are saved in `test_classifiers/results/` for comparison.
 
-- [ ] Figure out RAG implementation
-- [x] Add intelligent chat history tracking
-- [x] teach bot use twitch emotes in responses and recognize them in chat
-- [x] abstract API calling logics to a separate module (so i can switch between different LLM providers just using.env variables)
-- [x] zero shot classification? (classifiers tried: hateBERT, LogReg on TF-IDF vectors, zero shot)
-- [x] Bot should reply when it is tagged, no matter if it is appropriate or not (can be toggled on/off)
-- [ ] Host bot on a server?
-- [x] Replace boolean output (True/False) with confidence score from DeepSeek (clanker shouldnt be offensive) -> Now a classifier(zero-shot + detoxify from transformers) output confidence score before passing to LLM 
-- [x] Add counter(nontoxic_count) for each user (how many messages the user sent that were appropriate), and use that to adjust the bot's response (e.g., be more lenient with users who have a good track record), we need a persistent layer (database, SQLite) for that
-- [ ] add twitch bot command (!notoxic username) to revert the toxic_count of a user (just -1)
-- [ ] Web UI
+### 5. Added RAG for Game Context Understanding
+Used RAG (Retrieval-Augmented Generation) with The Witcher lore to help the bot distinguish between in-game context and real-world toxicity. Now the bot can understand that "Nilfgaardian kingdom is the worst" is about game lore, not actual political opinion. The knowledge base is stored in ChromaDB for fast semantic retrieval.
 
-## Setup
+### 6. User Reputation System
+Implemented a persistent reputation system using SQLite to track user behavior:
+- **Nontoxic count**: Incremented for every appropriate message
+- **Toxic count**: Incremented when user gets called out
+- **Penalty system**: When flagged as toxic, user loses 20% of their nontoxic score
+- **Reputation tiers**: 
+  - TRUSTED USER (50+ nontoxic messages) - LLM is more lenient
+  - Regular (20-49 nontoxic messages)
+  - New (<20 messages)
 
-1. Install dependencies: `pip install -r requirements.txt`
-2. Configure `.env`:
-   ```
-   TWITCH_BOT_USERNAME=your_bot_username
-   CLIENT_ID=your_twitch_client_id
-   CLIENT_SECRET=your_twitch_client_secret
-   DEEPSEEK_API_KEY=your_deepseek_api_key
-   TWITCH_CHANNEL=target_channel_name
-   ```
-3. Run: `python simple_roast_bot.py`
+The LLM considers reputation when deciding whether to roast someone, reducing false positives for regular viewers.
+
+**Moderator override:** `!nottoxic [username]` command to correct false positives and restore reputation.
+
+## Project Structure
+
+```
+├── roast_bot_main.py              # Main bot orchestration
+├── classifier.py                  # Message classification logic
+├── deepseek_inference.py          # LLM API integration
+├── prompts.py                     # System prompts for LLM
+├── user_reputation.py             # SQLite reputation tracking
+├── rag_knowledge.py               # RAG context retrieval
+├── emote_handler.py               # Twitch emote processing
+├── offensive_logreg_classifier.joblib  # Trained classifier model
+├── test_classifiers/              # Classifier testing scripts
+│   ├── test_logreg_classifier.py
+│   ├── test_hatebert_classifier.py
+│   ├── test_toxic_bert.py
+│   ├── test_zero_shot_classifier.py
+│   ├── test_toxicbert_zeroshot_classifier.py
+│   ├── test_messages.txt          # Centralized test messages
+│   └── results/                   # JSON outputs from tests
+└── data/
+    └── labeled_data.csv           # Training data for classifier
+```
+
+## Features
+
+- ✅ Real-time toxic message detection
+- ✅ Witty LLM-generated comebacks via DeepSeek
+- ✅ Multi-layer classification (pre-screening + LLM judgment)
+- ✅ Persistent user reputation system (SQLite)
+- ✅ RAG knowledge base for context-aware responses
+- ✅ Moderator commands for false positive correction
+- ✅ Twitch emote support
+
+## To Do
+
+- [ ] Host it on a server (currently runs locally)
+- [ ] Create web UI for monitoring/configuration
+- [ ] Fine-tune classifier thresholds based on production data
+- [ ] Add analytics dashboard for reputation stats
+
+## Technologies Used
+
+- **TwitchIO**: Twitch chat integration
+- **DeepSeek API**: LLM for roast generation
+- **Transformers (HuggingFace)**: Classifier models
+- **SQLite**: User reputation database
+- **ChromaDB**: RAG knowledge retrieval
+- **Joblib**: Model serialization
+
+---
+
+*Note: This bot is designed for entertainment and moderation purposes. Use responsibly and configure it to match your community guidelines.*
