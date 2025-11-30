@@ -8,15 +8,40 @@ I stream video games sometimes, and random people occasionally jump into chat to
 
 Meet **smobotat**: a roast bot for my Twitch channel that claps back at toxic messages with witty responses.
 
+---
+
+
+## Technologies Used
+
+- **TwitchIO**: Twitch chat integration
+- **DeepSeek API**: LLM for roast generation
+- **Transformers (HuggingFace)**: Classifier models
+- **SQLite**: User reputation database
+- **ChromaDB**: RAG knowledge retrieval
+- **Joblib**: Model serialization
+
+---
+
 ## Development Journey
 
 ### 1. Local LLM Attempt (Failed)
 Initially tried running Ollama with Gemma locally. **Result:** It crashed my stream. Local inference was too resource-intensive to run alongside streaming.
 
 ### 2. Switched to DeepSeek API
-Decided to use the DeepSeek API instead - it's a relatively cheap option and doesn't kill my stream performance. Problem solved... sort of.
+Decided to use the DeepSeek API instead. It's a relatively cheap option and doesn't kill my stream performance. Problem solved... sort of.
 
-### 3. The False Positive Problem
+### 3. The Emote Spam Problem
+Twitch chat culture involves spamming emotes - 7TV, BTTV, FFZ, and native Twitch emotes. The problem? These are just strings like "ICANT", "Aware", "PogChamp" that look like gibberish to the bot, causing false flags.
+
+**Solution:** Implemented emote stripping by fetching emote lists from:
+- 7TV API (global + user emotes via GraphQL)
+- BetterTTV global emotes
+- FrankerFaceZ global emotes  
+- Twitch native emotes (using position data from chat messages)
+
+Now the bot strips all emotes before analyzing messages, so "Pog Pog Pog" becomes an empty string instead of triggering toxicity detection.
+
+### 4. The False Positive Problem
 The bot was too sensitive. It would roast people for controversial topics related to in-game plot elements. For example:
 - Someone says: *"Nilfgaardian kingdom is the worst"* (about The Witcher 3)
 - Bot thinks: *"Political opinion detected! 🚨"*
@@ -24,7 +49,7 @@ The bot was too sensitive. It would roast people for controversial topics relate
 
 This was a problem.
 
-### 4. Added Classifier Layer
+### 5. Added Classifier Layer
 To avoid calling the LLM on every single message, I added a classifier layer on top. Now messages are pre-screened before the LLM gets involved, saving API calls and reducing false positives.
 
 **Tested multiple classifiers:**
@@ -51,10 +76,10 @@ To avoid calling the LLM on every single message, I added a classifier layer on 
 
 **Decision:** Using the combined classifier (`unitary/toxic-bert` + `facebook/bart-large-mnli`) with an 85-88% confidence threshold in the production pipeline. This approach provides the optimal balance between catching toxic messages and minimizing false positives.
 
-### 5. Added RAG for Game Context Understanding
+### 6. Added RAG for Game Context Understanding
 Used RAG (Retrieval-Augmented Generation) with The Witcher lore to help the bot distinguish between in-game context and real-world toxicity. Now the bot can understand that "Nilfgaardian kingdom is the worst" is about game lore, not actual political opinion. The knowledge base is stored in ChromaDB for fast semantic retrieval.
 
-### 6. User Reputation System
+### 7. User Reputation System
 Implemented a persistent reputation system using SQLite to track user behavior:
 - **Nontoxic count**: Incremented for every appropriate message
 - **Toxic count**: Incremented when user gets called out
@@ -113,15 +138,6 @@ On 11/29/2025, someone jumped into my chat asking to add them on Steam. The bot 
 - [ ] Create web UI for monitoring/configuration
 - [ ] Add analytics dashboard for reputation stats
 
-## Technologies Used
 
-- **TwitchIO**: Twitch chat integration
-- **DeepSeek API**: LLM for roast generation
-- **Transformers (HuggingFace)**: Classifier models
-- **SQLite**: User reputation database
-- **ChromaDB**: RAG knowledge retrieval
-- **Joblib**: Model serialization
-
----
 
 *Note: This bot is designed for entertainment and moderation purposes. Use responsibly and configure it to match your community guidelines.*
