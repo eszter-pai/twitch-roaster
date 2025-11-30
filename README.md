@@ -6,7 +6,7 @@
 
 I stream video games sometimes, and random people occasionally jump into chat to drop racism/sexism remarks or launch into political takes. It frustrates me that I don't always have a clever comeback ready. So I decided to make a bot do it for me.
 
-Meet **Smobotat** - a roast bot for my Twitch channel that claps back at toxic messages with witty responses.
+Meet **smobotat** - a roast bot for my Twitch channel that claps back at toxic messages with witty responses.
 
 ## Development Journey
 
@@ -51,7 +51,7 @@ Implemented a persistent reputation system using SQLite to track user behavior:
 
 The LLM considers reputation when deciding whether to roast someone, reducing false positives for regular viewers.
 
-**Moderator override:** `!nottoxic [username]` command to correct false positives and restore reputation.
+**Moderator override:** `!detox [username]` command to correct false positives and restore reputation.
 
 ## Project Structure
 
