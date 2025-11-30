@@ -1,12 +1,12 @@
-# Smobotat - Twitch Roast Bot
+# smobotat - Twitch Roast Bot with Zero-Shot Classification, RAG & Multi-Model NLP Pipeline
 
-![Smobotat in action](img/twitch_bot_chat.PNG)
+![smobotat in action](img/twitch_bot_chat.PNG)
 
 ## Why This Project Exists
 
 I stream video games sometimes, and random people occasionally jump into chat to drop racism/sexism remarks or launch into political takes. It frustrates me that I don't always have a clever comeback ready. So I decided to make a bot do it for me.
 
-Meet **smobotat** - a roast bot for my Twitch channel that claps back at toxic messages with witty responses.
+Meet **smobotat**: a roast bot for my Twitch channel that claps back at toxic messages with witty responses.
 
 ## Development Journey
 
@@ -28,13 +28,28 @@ This was a problem.
 To avoid calling the LLM on every single message, I added a classifier layer on top. Now messages are pre-screened before the LLM gets involved, saving API calls and reducing false positives.
 
 **Tested multiple classifiers:**
-- Logistic Regression (custom trained)
-- HateBERT
-- Toxic-BERT
-- Zero-shot classifier (BART)
-- Combined toxic-bert + zero-shot approach
 
-Results are saved in `test_classifiers/results/` for comparison.
+#### HateBERT
+![HateBERT Results](img/hatebert_confidence_scores.png)
+**Result:** Too sensitive. Flagged all 28 test messages as offensive (100% false positive rate). Even benign messages like "hello hows your day" triggered it. Unusable for production.
+
+#### Logistic Regression (Custom Trained)
+![LogReg Results](img/logreg_confidence_scores.png)
+**Result:** Too conservative. Only flagged 3 out of 28 messages (10.7% detection rate). While it has low false positives, it misses too much actual toxic content.
+
+#### Toxic-BERT (unitary/toxic-bert)
+![Toxic-BERT Results](img/toxic_bert_max_scores.png)
+**Result:** Extremely sensitive. Flagged all 28 messages as toxic across 6 categories. Even "nice play!" was marked as toxic. High false positive rate makes it unsuitable on its own.
+
+#### Zero-Shot Classifier (facebook/bart-large-mnli)
+![Zero-Shot Results](img/zero_shot_max_scores.png)
+**Result:** Better than individual models but has category confusion. The "requests to add on social platforms" category incorrectly triggered on normal greetings like "hello hows your day" (89% flagged, 25/28 messages).
+
+#### Combined Approach (Toxic-BERT + Zero-Shot @ 85% threshold)
+![Combined Results](img/combined_85_results.png)
+**Result:** Best balance. Flagged 22 out of 28 messages (78.6% detection rate) by taking the maximum score from both models. This hybrid approach catches genuine toxic content while maintaining better accuracy than individual classifiers.
+
+**Decision:** Using the combined classifier (`unitary/toxic-bert` + `facebook/bart-large-mnli`) with an 85-88% confidence threshold in the production pipeline. This approach provides the optimal balance between catching toxic messages and minimizing false positives.
 
 ### 5. Added RAG for Game Context Understanding
 Used RAG (Retrieval-Augmented Generation) with The Witcher lore to help the bot distinguish between in-game context and real-world toxicity. Now the bot can understand that "Nilfgaardian kingdom is the worst" is about game lore, not actual political opinion. The knowledge base is stored in ChromaDB for fast semantic retrieval.
@@ -51,7 +66,13 @@ Implemented a persistent reputation system using SQLite to track user behavior:
 
 The LLM considers reputation when deciding whether to roast someone, reducing false positives for regular viewers.
 
-**Moderator override:** `!detox [username]` command to correct false positives and restore reputation.
+**Moderator override:** `!detox [username]` command to correct false positives and restore reputation. (toxic message count decremented by 1, nontoxic count incremented by 1)
+
+## Real-World Performance
+
+![Bot in Action](img/bot_trigger.PNG)
+
+On 11/29/2025, someone jumped into my chat asking to add them on Steam. The bot correctly identified this as weird behavior and roasted them back. Throughout that entire stream, the bot didn't trigger on any other viewers, no false positives on regular chat messages. This is exactly the behavior I was looking for.
 
 ## Project Structure
 
@@ -90,7 +111,6 @@ The LLM considers reputation when deciding whether to roast someone, reducing fa
 
 - [ ] Host it on a server (currently runs locally)
 - [ ] Create web UI for monitoring/configuration
-- [ ] Fine-tune classifier thresholds based on production data
 - [ ] Add analytics dashboard for reputation stats
 
 ## Technologies Used
