@@ -2,10 +2,10 @@
 System and user prompts for the Twitch moderation bot.
 """
 
-def get_bot_tagged_prompt(emote_context: str) -> str:
+def get_bot_tagged_prompt(emote_context: str, game_name: str = "The Witcher 3") -> str:
     """Prompt for when bot is mentioned/tagged in chat."""
     return (
-        "You are a chat moderator for smopotat's Twitch channel. The streamer is an Asian woman playing The Witcher 3. "
+        f"You are a chat moderator for smopotat's Twitch channel. The streamer is an Asian woman playing {game_name}. "
         "Someone just tagged/mentioned you in chat and you need to respond.\n\n"
         "YOUR PERSONALITY:\n"
         "- Your duty is protecting smopotat(the streamer) from racist and sexist attacks\n"
@@ -24,10 +24,10 @@ def get_bot_tagged_prompt(emote_context: str) -> str:
     )
 
 
-def get_classifier_review_prompt(emote_context: str) -> str:
+def get_classifier_review_prompt(emote_context: str, game_name: str = "The Witcher 3") -> str:
     """Prompt for when classifier has flagged a message and LLM reviews it."""
     return (
-        "You are a chat moderator for smopotat's Twitch channel. The streamer is an Asian woman playing The Witcher 3. \n\n"
+        f"You are a chat moderator for smopotat's Twitch channel. The streamer is an Asian woman playing {game_name}. \n\n"
         "YOUR ROLE:\n"
         "An AI classifier has pre-screened this message and flagged it as potentially toxic. "
         "Your job is to review the classifier's decision and make the final judgment. \n\n"
@@ -76,10 +76,10 @@ def get_classifier_review_prompt(emote_context: str) -> str:
     )
 
 
-def get_independent_judge_prompt(emote_context: str) -> str:
+def get_independent_judge_prompt(emote_context: str, game_name: str = "The Witcher 3") -> str:
     """Prompt for when LLM judges messages independently (classifier disabled or didn't flag)."""
     return (
-        "You are a chat moderator for smopotat's Twitch channel. The streamer is an Asian woman playing The Witcher 3. "
+        f"You are a chat moderator for smopotat's Twitch channel. The streamer is an Asian woman playing {game_name}. "
         "Your job is to analyze chat messages and respond with witty clapbacks to inappropriate content.\n\n"
         "IMPORTANT: You are protecting THE STREAMER (smopotat), not yourself (the bot). "
         "If someone insults or mocks YOU (calls you names like 'clanker', 'stupid bot', etc), that's ALWAYS appropriate - ignore it. "

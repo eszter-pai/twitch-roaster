@@ -53,6 +53,9 @@ TARGET_CHANNEL = os.getenv('TWITCH_CHANNEL')
 EMOTE_USER_ID = os.getenv('SEVENTV_USER_ID')
 TOKEN_FILE = 'twitch_tokens.json'
 
+# Game Configuration
+CURRENT_GAME = "CyberPunk 2077"  # Change this to whatever game you're playing
+
 # LLM Provider Configuration
 LLM_PROVIDER = 'deepseek' # 'deepseek' or 'ollama'
 OLLAMA_MODEL = 'gemma3:4b'  # Model to use with Ollama
@@ -64,6 +67,9 @@ RESPOND_WHEN_TAGGED = False
 # Classifier settings
 USE_CLASSIFIER = True
 CLASSIFIER_THRESHOLD = 0.88
+
+# RAG settings
+USE_RAG = False
 
 # Initialize LLM client based on provider
 if LLM_PROVIDER == 'deepseek':
@@ -126,19 +132,22 @@ async def on_ready(ready_event: EventData):
     
     # Fetch all emotes for stripping
     print('Fetching all emotes for message stripping...')
-    fetch_all_emote_names(EMOTE_USER_ID)
-    print('All emote lists loaded!')
-    
-    # Load RAG knowledge base
+    # Load RAG knowledge base if enabled
     global witcher_knowledge_collection
-    print('\nLoading Witcher lore knowledge base...')
-    try:
-        witcher_knowledge_collection = create_witcher_knowledge_base(
-            db_path="./chroma_db",
-            collection_name="witcher_lore",
-            force_recreate=False
-        )
-        print('Witcher knowledge base loaded successfully!\n')
+    if USE_RAG:
+        print('\nLoading Witcher lore knowledge base...')
+        try:
+            witcher_knowledge_collection = create_witcher_knowledge_base(
+                db_path="./chroma_db",
+                collection_name="witcher_lore",
+                force_recreate=False
+            )
+            print('Witcher knowledge base loaded successfully!\n')
+        except Exception as e:
+            print(f'Failed to load knowledge base: {e}')
+            print('Continuing without RAG context...\n')
+    else:
+        print('\nRAG is disabled, skipping knowledge base loading.\n')
     except Exception as e:
         print(f'Failed to load knowledge base: {e}')
         print('Continuing without RAG context...\n')
@@ -252,12 +261,9 @@ async def on_message(msg: ChatMessage):
     # clean_text = preprocess_text(msg.text)
     # is_offensive = classifier.predict([clean_text])[0]
     # confidence = classifier.predict_proba([clean_text])[0]
-    # 
-    # print(f"Classifier: {'OFFENSIVE' if is_offensive == 1 else 'NOT OFFENSIVE'} (confidence: {confidence[is_offensive]:.2%})")
-    
-    # Query RAG knowledge base for Witcher lore context
+    # Query RAG knowledge base for Witcher lore context if enabled
     witcher_context = ""
-    if witcher_knowledge_collection is not None and message_without_emotes.strip():
+    if USE_RAG and witcher_knowledge_collection is not None and message_without_emotes.strip():
         try:
             rag_results = query_witcher_knowledge(
                 query=message_without_emotes,
@@ -267,6 +273,9 @@ async def on_message(msg: ChatMessage):
             witcher_context = format_retrieved_context(rag_results, max_chunks=2)
             if witcher_context:
                 print(f"\nRetrieved Witcher lore context:\n{witcher_context[:200]}...\n")
+        except Exception as e:
+            print(f"Error querying RAG knowledge base: {e}")
+            print(f"\nRetrieved Witcher lore context:\n{witcher_context[:200]}...\n")
         except Exception as e:
             print(f"Error querying RAG knowledge base: {e}")
 
@@ -286,13 +295,13 @@ async def on_message(msg: ChatMessage):
     # Use different system prompts based on whether bot is tagged and classifier status
     if is_bot_tagged and RESPOND_WHEN_TAGGED:
         # Bot was tagged and configured to force a reply
-        SYSTEM_PROMPT = get_bot_tagged_prompt(emote_context)
+        SYSTEM_PROMPT = get_bot_tagged_prompt(emote_context, CURRENT_GAME)
     elif USE_CLASSIFIER and classifier_result:
         # Classifier is enabled and flagged this message - LLM reviews the classifier's decision
-        SYSTEM_PROMPT = get_classifier_review_prompt(emote_context)
+        SYSTEM_PROMPT = get_classifier_review_prompt(emote_context, CURRENT_GAME)
     else:
         # Classifier is disabled OR didn't flag message - LLM judges message independently
-        SYSTEM_PROMPT = get_independent_judge_prompt(emote_context)
+        SYSTEM_PROMPT = get_independent_judge_prompt(emote_context, CURRENT_GAME)
     
     try:
         # Call LLM API based on provider
