@@ -132,6 +132,9 @@ async def on_ready(ready_event: EventData):
     
     # Fetch all emotes for stripping
     print('Fetching all emotes for message stripping...')
+    fetch_all_emote_names(EMOTE_USER_ID)
+    print('All emote lists loaded!')
+    
     # Load RAG knowledge base if enabled
     global witcher_knowledge_collection
     if USE_RAG:
@@ -148,9 +151,6 @@ async def on_ready(ready_event: EventData):
             print('Continuing without RAG context...\n')
     else:
         print('\nRAG is disabled, skipping knowledge base loading.\n')
-    except Exception as e:
-        print(f'Failed to load knowledge base: {e}')
-        print('Continuing without RAG context...\n')
     
     # Load classifier models if enabled
     if USE_CLASSIFIER:
@@ -273,9 +273,6 @@ async def on_message(msg: ChatMessage):
             witcher_context = format_retrieved_context(rag_results, max_chunks=2)
             if witcher_context:
                 print(f"\nRetrieved Witcher lore context:\n{witcher_context[:200]}...\n")
-        except Exception as e:
-            print(f"Error querying RAG knowledge base: {e}")
-            print(f"\nRetrieved Witcher lore context:\n{witcher_context[:200]}...\n")
         except Exception as e:
             print(f"Error querying RAG knowledge base: {e}")
 
